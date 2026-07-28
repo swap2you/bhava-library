@@ -3,7 +3,8 @@
 **Repository:** https://github.com/swap2you/bhava-library  
 **Visibility:** public  
 **Phase-start commit:** `783811455b4db77c4fe0f1018fd7d38568240716`  
-**Current commit (at report authoring):** see `git rev-parse HEAD` / latest `main`  
+**Current commit:** `f9dc91cc569bed9572ed55f6f0e7c7abf3725ab9`  
+**CI:** green — https://github.com/swap2you/bhava-library/actions/runs/30400117455  
 **Branch:** `main`
 
 ## Identity
