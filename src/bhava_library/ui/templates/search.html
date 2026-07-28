@@ -8,13 +8,20 @@
     input { width: 70%; padding: 0.5rem; }
     table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
     th, td { text-align: left; padding: 0.4rem; border-bottom: 1px solid #d9d0c0; }
+    .stats { background: #ebe4d6; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; }
   </style>
 </head>
 <body>
   <h1>{{ project }}</h1>
-  <p>Localhost-only catalog search. Third-party originals are not published from this UI.</p>
+  <p>{{ bind_note }}</p>
+  <div class="stats">
+    Resources: {{ counts.resources }} |
+    Local files: {{ counts.local_files }} |
+    Classifications: {{ counts.classifications }} |
+    Display names: {{ counts.display_names }}
+  </div>
   <form method="get">
-    <input name="q" value="{{ q }}" placeholder="Search title, theme, type…">
+    <input name="q" value="{{ q }}" placeholder="Search display title, slug…">
     <button type="submit">Search</button>
   </form>
   <table>
@@ -22,7 +29,7 @@
     <tbody>
     {% for row in rows %}
       <tr>
-        <td>{{ row["title_original"] }}</td>
+        <td>{{ row["display_title"] }}</td>
         <td>{{ row["media_type"] }}</td>
         <td>{{ row["media_format"] }}</td>
         <td>{{ row["theme"] }}</td>
