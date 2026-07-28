@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -25,7 +26,14 @@ def _should_skip(path: Path) -> bool:
 
 
 def _win_long(path: Path) -> str:
+    """Return a path string suitable for copy on the current OS.
+
+    On Windows, prefix with ``\\\\?\\`` so long paths work. On POSIX, return the
+    resolved path unchanged — the Windows long-path prefix breaks Linux/macOS.
+    """
     resolved = str(path.resolve())
+    if sys.platform != "win32":
+        return resolved
     if resolved.startswith("\\\\?\\"):
         return resolved
     return "\\\\?\\" + resolved

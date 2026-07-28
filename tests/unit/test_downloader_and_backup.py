@@ -652,11 +652,17 @@ def test_audio_profile_queues_under_audio_dir(httpx_mock, settings):
     assert len(audio_files) == 1
 
 
-def test_backup_long_path_helper():
+def test_backup_long_path_helper(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    import sys
+
     from bhava_library.services.backup import _win_long
 
-    p = Path(r"C:\Development\Workspace\DevotionalRepo\bhava-library\data\x")
+    p = tmp_path / "x"
+    p.mkdir()
+    monkeypatch.setattr(sys, "platform", "win32")
     assert _win_long(p).startswith("\\\\?\\")
+    monkeypatch.setattr(sys, "platform", "linux")
+    assert not _win_long(p).startswith("\\\\?\\")
 
 
 def test_full_backup_and_restore_verification(settings, tmp_path: Path):
