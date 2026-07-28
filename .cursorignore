@@ -24,3 +24,6 @@ Bhava_Library_Cursor_Implementation_Package_v1.0/**
 **/*.part
 **/*.tmp
 .venv/**
+
+Bhava_Library_Curation_and_Classification_Prompt_Library_v1.0/**
+

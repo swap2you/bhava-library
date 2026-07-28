@@ -57,3 +57,8 @@ htmlcov/
 # Logs and generated reports
 /logs/**
 /reports/generated/**
+
+# Curation prompt package (local historical reference)
+/Bhava_Library_Curation_and_Classification_Prompt_Library_v1.0/
+/Bhava_Library_Curation_and_Classification_Prompt_Library_v1.0.zip
+
