@@ -10,8 +10,8 @@ from rich.table import Table
 
 from bhava_library import __version__
 from bhava_library.config import Settings, load_settings
-from bhava_library.constants import EXIT_CONFIG, EXIT_INTERNAL, EXIT_SUCCESS
-from bhava_library.domain.errors import BhavaError
+from bhava_library.constants import EXIT_BACKUP_VERIFY, EXIT_CONFIG, EXIT_INTERNAL, EXIT_SUCCESS
+from bhava_library.domain.errors import BackupVerifyError, BhavaError
 from bhava_library.infrastructure.database import Database
 from bhava_library.infrastructure.filesystem import ensure_dirs
 from bhava_library.logging import setup_logging
@@ -109,26 +109,40 @@ def estimate(
 def acquire(profile: str = typer.Option("core", help="Acquisition profile")) -> None:
     """Download the current safe batch for the profile."""
     settings = _settings()
-    # Ensure scan/resolve/estimate pipeline for core if queue empty
     db = Database(settings.catalog_db)
     db.migrate()
     pending = db.execute(
-        "SELECT COUNT(*) AS n FROM download_jobs WHERE state IN ('pending','paused','retryable','active')"
+        """
+        SELECT COUNT(*) AS n
+        FROM download_jobs j
+        JOIN resources r ON r.resource_id = j.resource_id
+        WHERE j.state IN ('pending','paused','retryable','active')
+          AND (
+            ? = 'all'
+            OR r.profile = ?
+            OR (? = 'core' AND r.profile IN ('core','unknown'))
+          )
+        """,
+        (profile, profile, profile),
     )
     if not pending or pending[0]["n"] == 0:
-        console.print("No queued jobs; running scan → resolve → estimate first")
-        scan_svc.run_scan(settings)
-        resolve_svc.run_resolve(settings)
+        console.print(f"No queued {profile} jobs; running estimate for profile")
+        if profile == "core":
+            # Ensure catalog freshness only for core bootstrap
+            rows = db.execute("SELECT COUNT(*) AS n FROM resources WHERE removed_at IS NULL")
+            if not rows or rows[0]["n"] == 0:
+                scan_svc.run_scan(settings)
+                resolve_svc.run_resolve(settings)
         estimate_svc.run_estimate(settings, profile=profile)
     code = download_svc.run_acquire(settings, profile=profile)
     raise typer.Exit(code)
 
 
 @app.command()
-def resume() -> None:
-    """Resume pending/partial downloads."""
+def resume(profile: str = typer.Option("core", help="Acquisition profile to resume")) -> None:
+    """Resume pending/partial downloads for a profile."""
     settings = _settings()
-    code = download_svc.run_resume(settings)
+    code = download_svc.run_resume(settings, profile=profile)
     raise typer.Exit(code)
 
 
@@ -181,21 +195,32 @@ def report() -> None:
 @app.command()
 def backup(
     target: str | None = typer.Option(None, help="Backup destination root"),
+    full_verify: bool = typer.Option(False, "--full-verify", help="Hash-check every copied file"),
 ) -> None:
     """Create a timestamped non-destructive backup."""
     settings = _settings()
-    result = backup_svc.run_backup(settings, target=target)
+    try:
+        result = backup_svc.run_backup(settings, target=target, full_verify=full_verify)
+    except BackupVerifyError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(EXIT_BACKUP_VERIFY) from exc
     console.print(result)
-    raise typer.Exit(EXIT_SUCCESS)
+    code = EXIT_SUCCESS if bool(result.get("verification_ok")) else EXIT_BACKUP_VERIFY
+    raise typer.Exit(code)
 
 
 @app.command("restore-check")
 def restore_check(
     target: str = typer.Option(..., help="Backup folder or parent directory"),
+    full: bool = typer.Option(False, "--full", help="Verify every manifest entry"),
 ) -> None:
-    """Verify a backup via sampled hash checks."""
+    """Verify a backup via sampled or full hash checks."""
     settings = _settings()
-    result = backup_svc.run_restore_check(settings, target=target)
+    try:
+        result = backup_svc.run_restore_check(settings, target=target, full=full)
+    except BackupVerifyError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(EXIT_BACKUP_VERIFY) from exc
     console.print(result)
     raise typer.Exit(EXIT_SUCCESS)
 

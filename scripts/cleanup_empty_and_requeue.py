@@ -52,4 +52,7 @@ conn.execute(
 )
 conn.commit()
 print("jobs", conn.execute("SELECT state, COUNT(*) FROM download_jobs GROUP BY state").fetchall())
-print("local_files", conn.execute("SELECT COUNT(*), COALESCE(SUM(size_bytes),0) FROM local_files").fetchone())
+print(
+    "local_files",
+    conn.execute("SELECT COUNT(*), COALESCE(SUM(size_bytes),0) FROM local_files").fetchone(),
+)

@@ -1,5 +1,0 @@
----
-description: Original file immutability
-alwaysApply: true
----
-Verified reference originals are immutable. Never edit in place, silently overwrite, normalize binary content, strip metadata, or recompress. A changed remote object becomes a new local version and manifest entry.

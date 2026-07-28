@@ -182,14 +182,49 @@ def download_one(
 
         response = client.stream_get(url, headers=headers)
         try:
-            if response.status_code == 404:
+            if response.status_code in {400, 404, 410}:
                 with db.session() as conn:
                     conn.execute(
                         "UPDATE download_jobs SET state=?, last_error_code=?, last_error_message=?, updated_at=? WHERE job_id=?",
                         (
                             JobState.TERMINAL_FAILURE.value,
-                            "HTTP_404",
-                            "Not found",
+                            f"HTTP_{response.status_code}",
+                            f"HTTP {response.status_code}",
+                            utc_now(),
+                            job["job_id"],
+                        ),
+                    )
+                    conn.execute(
+                        "UPDATE resources SET status=? WHERE resource_id=?",
+                        (ResourceStatus.FAILED_TERMINAL.value, rid),
+                    )
+                return "terminal"
+
+            content_type = (
+                (response.headers.get("content-type") or "").split(";")[0].strip().lower()
+            )
+            if "text/html" in content_type and ext in {
+                ".pdf",
+                ".doc",
+                ".docx",
+                ".rtf",
+                ".epub",
+                ".zip",
+                ".xls",
+                ".xlsx",
+                ".ppt",
+                ".pptx",
+                ".mp3",
+                ".mp4",
+            }:
+                response.close()
+                with db.session() as conn:
+                    conn.execute(
+                        "UPDATE download_jobs SET state=?, last_error_code=?, last_error_message=?, updated_at=? WHERE job_id=?",
+                        (
+                            JobState.TERMINAL_FAILURE.value,
+                            "HTML_FOR_DOCUMENT",
+                            f"HTML content-type for document URL ({content_type})",
                             utc_now(),
                             job["job_id"],
                         ),
@@ -432,5 +467,5 @@ def run_acquire(settings: Settings, *, profile: str = "core") -> int:
     return EXIT_SUCCESS
 
 
-def run_resume(settings: Settings) -> int:
-    return run_acquire(settings, profile="core")
+def run_resume(settings: Settings, *, profile: str = "core") -> int:
+    return run_acquire(settings, profile=profile)

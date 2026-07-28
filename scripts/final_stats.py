@@ -33,7 +33,9 @@ stats = {
     "broken": conn.execute(
         "SELECT COUNT(*) FROM resources WHERE status='inaccessible' AND removed_at IS NULL"
     ).fetchone()[0],
-    "jobs": dict(conn.execute("SELECT state, COUNT(*) FROM download_jobs GROUP BY state").fetchall()),
+    "jobs": dict(
+        conn.execute("SELECT state, COUNT(*) FROM download_jobs GROUP BY state").fetchall()
+    ),
     "local_files": conn.execute("SELECT COUNT(*) FROM local_files").fetchone()[0],
     "verified_bytes": conn.execute(
         "SELECT COALESCE(SUM(size_bytes),0) FROM local_files WHERE quarantine_reason IS NULL"

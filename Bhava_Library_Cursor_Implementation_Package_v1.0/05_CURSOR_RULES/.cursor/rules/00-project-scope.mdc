@@ -1,5 +1,0 @@
----
-description: Bhāva Library scope and repository boundary
-alwaysApply: true
----
-Work only in `bhava-library`. Never modify other Bhāva or Krishna Story Factory repositories. This is a private local-first reference archive. Do not build the public website, store, comic production system, or mobile app in this milestone.

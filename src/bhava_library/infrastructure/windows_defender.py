@@ -74,7 +74,9 @@ def scan_file(path: Path) -> DefenderResult:
             completed.returncode,
             detail,
         )
-        return DefenderResult(available=True, clean=None, detail=detail or f"exit={completed.returncode}")
+        return DefenderResult(
+            available=True, clean=None, detail=detail or f"exit={completed.returncode}"
+        )
     return DefenderResult(
         available=True, clean=clean, detail=detail or f"exit={completed.returncode}"
     )

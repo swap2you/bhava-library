@@ -2,6 +2,10 @@
 /data/**
 !/data/.gitkeep
 
+# Historical extracted package (kept locally; do not track)
+/Bhava_Library_Cursor_Implementation_Package_v1.0/
+/Bhava_Library_Cursor_Implementation_Package_v1.0.zip
+
 # Local configuration
 /config/local.toml
 .env

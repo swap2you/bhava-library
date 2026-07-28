@@ -1,161 +1,83 @@
-# Bhāva Library — Final Implementation and Acquisition Report
+# Bhāva Library — Stabilization & Acquisition Completion Report
 
-Prepared: 2026-07-28  
-Repository: `C:\Development\Workspace\DevotionalRepo\bhava-library`  
-Branch: `main` (local)
+**Repository:** https://github.com/swap2you/bhava-library  
+**Visibility:** public  
+**Base commit at phase start:** `783811455b4db77c4fe0f1018fd7d38568240716`  
+**Branch:** `main`
 
-## 1. Repository structure created
+## Identity
 
-Implemented per `02_ARCHITECTURE/REPOSITORY_BLUEPRINT.md`:
+Corrected active identity everywhere (rules/config/docs/tests):
 
-- `.cursor/rules/` (copied from package)
-- `config/`, `src/bhava_library/`, `tests/`, `docs/`, `manifests/`, `copyright/`, `exports/`, `data/` (gitignored), `bhava.ps1`, `pyproject.toml`, `uv.lock`
+- Copyright owner: **Svarna Gauranga Das**
+- Publisher: **Dauji Publication**
+- Project: **Bhāva**
+- Location: **Harrisburg, Pennsylvania, USA**
+- Email: **svarnagaurangdas@gmail.com**
+- Phone: none
 
-## 2. Files added or changed
+`.cursor/rules/03-copyright.mdc` updated. Extracted package directory:
 
-New implementation at repository root (package left unmodified). Key surfaces:
+- untracked from Git;
+- excluded in `.cursorignore` and `.gitignore`;
+- marked `SUPERSEDED.md` at package root.
 
-- CLI: `bhava.ps1` → `uv run bhava-lib …`
-- Source adapter: `IskconEducationSourceAdapter`
-- Services: doctor, scan, resolve, estimate, download, verify, dedupe, index, report, backup, copyright
-- Optional local UI scaffold under `src/bhava_library/ui/`
+## CI
 
-## 3. Obsolete identity values found and corrected
+Added `.github/workflows/ci.yml` (Python 3.13 + uv):
 
-In **new** implementation only (package retained as specification):
+- ruff check/format, mypy, pytest, bandit, pip-audit, binary/data tracking guard
 
-| Obsolete | Corrected |
+Local gate: **45 passed** (`uv run pytest`).
+
+## Core reconciliation
+
+| Metric | Count |
 |---|---|
-| Swarna Gauranga Das | **Svarna Gauranga Das** |
-| SwarnaGaurangaDas@gmail.com | **svarnagaurangdas@gmail.com** |
-
-Applied in `config/default.toml`, copyright templates/schemas, notices, user-agent, docs, and tests.
-
-## 4. Commands implemented
-
-```text
-bootstrap doctor scan resolve estimate acquire resume status
-verify index report backup restore-check serve
-copyright new-work|notice|freeze
-```
-
-## 5. Tests executed
-
-```text
-uv run ruff check src tests          → All checks passed
-uv run ruff format --check src tests → formatted
-uv run mypy src                      → Success: no issues found in 36 source files
-uv run pytest (unit/safety/integration) → 21 passed
-uv run bandit -r src                 → 0 medium/high (Defender subprocess nosec’d)
-uv run pip-audit                     → No known vulnerabilities found
-```
-
-## 6. Live resource rows discovered
-
-**2470** media-library rows  
-Formats: Documents **1681**, Audio **789**  
-Video: **0**
-
-## 7. Link resolution
-
-| Outcome | Count |
-|---|---|
-| Resolved | 2462 |
-| Unresolved (initial resolve) | 8 |
-| Inaccessible / broken | 0 |
-
-Most resolutions used `direct_extension`. A few landing pages used `download_button` / HTML inspection.
-
-## 8. Estimated core download size
-
-| Metric | Value |
-|---|---|
-| Core candidates | 1681 |
-| Known bytes | 4,279,306,764 (~3.99 GiB) |
-| Unknown size count | 0 |
-| Batch cap | 20 GiB |
-| First batch | 1681 files / ~3.99 GiB (single batch) |
-| Safe to acquire | **Yes** |
-
-## 9. Disk space before and after
-
-| | Free |
-|---|---|
-| Before acquisition (doctor) | ~173.56 GiB |
-| After core acquisition + local backup | ~162.47 GiB |
-| Reserve policy | max(50 GiB, 15% volume) ≈ 142–153 GiB |
-| Reserve maintained | **Yes** |
-
-## 10. Files and bytes downloaded
-
-| Metric | Value |
-|---|---|
-| Jobs complete | 1657 |
-| Local files recorded | 1657 |
-| Verified / indexed | 1654 |
-| Bytes on disk (non-quarantine) | 4,245,941,730 (~3.95 GiB) |
-| Jobs still retryable | 24 |
+| Jobs complete | 1650–1657 (see live status) |
+| Terminal failures | 24–31 classified |
+| Indexed verified files | 1654 |
 | Quarantined | 3 |
+| Duplicate groups linked | 44 |
+| Audio deferred (pre-audio phase) | 789 |
 
-## 11. Verification, quarantine, duplicates
+Reports:
 
-- SHA-256 computed; read-only marking applied where verified
-- Windows Defender CLI present but often returns inconclusive `exit=2` (hr=0x80004005); treated as inconclusive, not auto-quarantine unless threat markers appear
-- Quarantined: **3**
-- Duplicate hash groups linked (non-destructive): **44**
+- `reports/CORE_RECONCILIATION.md`
+- `reports/CORE_RECONCILIATION.csv`
+- `reports/generated/core-reconciliation-*.csv`
 
-## 12. Audio and video deferred
+Classifications used: completed, source-empty, source-broken, landing-page-unresolved, access-restricted, retryable-transient, terminal-manual-review.
 
-| Profile | Count | Notes |
-|---|---|---|
-| Audio | **789** | Deferred; not downloaded |
-| Video | **0** | None in current catalog |
+Previous backup skipped long paths (documented in reconciliation):
 
-Exact next command for audio later: `.\bhava.ps1 estimate --profile audio`
+1. Bhakta Burfi fingerprint painting book PDF (long path)
+2. 1996 curriculum correspondence PDF (long path / empty source)
 
-## 13. Backup status
+## Backup behavior fix
 
-Backup completed successfully:
+Backups with required skipped files now:
 
-- Target: `data\backups\bhava-library-backup-20260728T182655Z`
-- Files: **1666** (skipped 2 long-path edge cases)
-- Bytes: **4,257,966,505**
-- Sample restore check: **ok** (`.\bhava.ps1 restore-check --target "data\backups"` → 25 hashes verified)
+- record skipped paths in manifest;
+- set `verification_ok = 0`;
+- raise `BackupVerifyError` / nonzero exit (`26`);
+- support `--full-verify` and restore `--full`.
 
-Prefer an external volume for durable copies; a backup under `data\backups` doubles local usage.
+Same-drive `data/backups` is **not** the durable backup. External target required.
 
-## 14. Unresolved risks
+## Audio estimate
 
-1. **24 retryable core jobs** remain (network/transient or awkward landing-page URLs).
-2. Some remote PDFs return **HTTP 200 with Content-Length 0** (empty on source) — marked terminal when encountered.
-3. A few “resolved” landing pages may store HTML wrappers rather than binary payloads — inspect `data/originals/.../unknown/`.
-4. Defender MpCmdRun inconclusive on this host — do not treat as clean attestation.
-5. Acquisition runs **serially per host** (httpx streaming is not thread-safe); polite but slower.
-6. Package HTML snapshot `_probe.html` under `data/` is local-only / gitignored.
+See `reports/AUDIO_ESTIMATE.md`:
 
-## 15. Exact next command for the owner
+- 789 audio candidates; ~9.62 GiB known; 1 unknown; safe to acquire (narrow reserve margin).
 
-Retry remaining core failures, then optionally start audio later:
+## Commands
 
 ```powershell
-.\bhava.ps1 resume
-.\bhava.ps1 status
-.\bhava.ps1 report
+.\bhava.ps1 resume --profile core
+.\bhava.ps1 acquire --profile audio
+.\bhava.ps1 backup --target "<EXTERNAL_BACKUP_PATH>"
+.\bhava.ps1 restore-check --target "<EXTERNAL_BACKUP_PATH>" --full
 ```
 
-Independent review:
-
-```powershell
-# Use prompts under docs\validation\review-prompts\
-```
-
-## Identity (original works only)
-
-- Owner: Svarna Gauranga Das  
-- Publisher: Dauji Publication  
-- Project: Bhāva  
-- Location: Harrisburg, Pennsylvania, USA  
-- Email: svarnagaurangdas@gmail.com  
-- Phone: none  
-
-Never applied to third-party originals under `data/originals/`.
+`resume` now accepts `--profile`.

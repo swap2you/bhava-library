@@ -10,7 +10,9 @@ print(
         "select coalesce(sum(size_bytes),0) from local_files where quarantine_reason is null"
     ).fetchone()[0],
 )
-print("resources", conn.execute("select status, count(*) from resources group by status").fetchall())
+print(
+    "resources", conn.execute("select status, count(*) from resources group by status").fetchall()
+)
 # count files on disk
 root = Path("data/originals")
 n = sum(1 for p in root.rglob("*") if p.is_file())

@@ -1,5 +1,0 @@
----
-description: Storage and Git safety
-alwaysApply: true
----
-All downloaded binaries, working databases, staging, quarantine, cache, thumbnails, and backups belong under `data/` and must be Git-ignored. Git tracks only code, schemas, manifests, checksums, lightweight reports, fixtures, and original-work records. Add automated guards against binary or large-file commits.

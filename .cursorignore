@@ -1,6 +1,7 @@
 data/**
 logs/**
 reports/generated/**
+Bhava_Library_Cursor_Implementation_Package_v1.0/**
 **/*.pdf
 **/*.epub
 **/*.mp3
