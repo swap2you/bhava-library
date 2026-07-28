@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bhava Source Dossier",
+  "type": "object",
+  "required": [
+    "candidate_id",
+    "working_title",
+    "product_type",
+    "primary_sources",
+    "facts",
+    "excluded_expression"
+  ],
+  "properties": {
+    "candidate_id": {
+      "type": "string"
+    },
+    "working_title": {
+      "type": "string"
+    },
+    "product_type": {
+      "type": "string"
+    },
+    "age_band": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "primary_sources": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "references_consulted": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "excluded_expression": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "original_brief": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "review_state": {
+      "enum": [
+        "draft",
+        "source_review",
+        "approved",
+        "blocked"
+      ]
+    }
+  }
+}

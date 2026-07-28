@@ -29,7 +29,12 @@ from bhava_library.sources.iskcon_education import classify_profile
 def settings(tmp_path: Path):
     s = load_settings()
     s = s.model_copy(
-        update={"paths": s.paths.model_copy(update={"data_dir": str(tmp_path / "data")})}
+        update={
+            "paths": s.paths.model_copy(update={"data_dir": str(tmp_path / "data")}),
+            "download": s.download.model_copy(
+                update={"reserve_gib": 1.0, "reserve_percent": 1.0, "request_delay_seconds": 0}
+            ),
+        }
     )
     for rel in (
         "catalog",

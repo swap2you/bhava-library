@@ -1,0 +1,5 @@
+---
+description: AI classification boundaries
+alwaysApply: true
+---
+AI outputs are proposals. Do not upload full third-party binaries. Record model, prompt, evidence, confidence, and raw output. Human review is mandatory for doctrinal, age, rights, and product decisions.

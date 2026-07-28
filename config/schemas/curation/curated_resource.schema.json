@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bhava Curated Resource",
+  "type": "object",
+  "required": [
+    "resource_id",
+    "original",
+    "display",
+    "classifications",
+    "review_state"
+  ],
+  "properties": {
+    "resource_id": {
+      "type": "string"
+    },
+    "original": {
+      "type": "object",
+      "required": [
+        "path",
+        "filename",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "display": {
+      "type": "object",
+      "required": [
+        "title",
+        "filename",
+        "slug"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "ascii_aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "classifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "dimension",
+          "term",
+          "confidence",
+          "source"
+        ],
+        "properties": {
+          "dimension": {
+            "type": "string"
+          },
+          "term": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "source": {
+            "enum": [
+              "source_metadata",
+              "rule",
+              "extraction",
+              "ai",
+              "human"
+            ]
+          },
+          "evidence": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviewed": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "review_state": {
+      "enum": [
+        "unclassified",
+        "proposed",
+        "needs_review",
+        "reviewed",
+        "approved",
+        "blocked"
+      ]
+    }
+  }
+}
