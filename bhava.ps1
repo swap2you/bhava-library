@@ -66,7 +66,7 @@ switch ($Command.ToLowerInvariant()) {
     }
     "help" {
         Write-Host "Commands: bootstrap doctor scan resolve estimate acquire resume status verify index report backup restore-check serve copyright"
-        Write-Host "Curation: curate snapshot|enrich|classify|build-views|review-report|integrity|sunday-school|candidates"
+        Write-Host "Curation: curate snapshot|names|enrich|classify|build-views|review-report|integrity|sunday-school|candidates"
         Write-Host "Archive: archive-pack archive-restore-check"
     }
     default {

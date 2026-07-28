@@ -33,6 +33,16 @@ def clean_display_title(title_original: str | None, filename: str | None = None)
     raw = (title_original or "").strip()
     if not raw and filename:
         raw = Path(filename).stem
+    # Decode common HTML entities from source titles
+    raw = (
+        raw.replace("&#039;", "'")
+        .replace("&apos;", "'")
+        .replace("&quot;", '"')
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&nbsp;", " ")
+    )
     raw = raw.replace("_", " ").replace("-", " ")
     raw = _MULTI_SPACE.sub(" ", raw).strip()
     if not raw:

@@ -19,6 +19,7 @@ from bhava_library.curation import (
     run_classify,
     run_enrich,
     run_integrity,
+    run_names,
     run_review_report,
     run_snapshot,
     run_sunday_school,
@@ -248,12 +249,22 @@ def curate_snapshot() -> None:
     raise typer.Exit(EXIT_SUCCESS)
 
 
+@curate_app.command("names")
+def curate_names(limit: int | None = typer.Option(None, help="Max resources")) -> None:
+    """Generate clean display titles/slugs without renaming originals."""
+    settings = _settings()
+    result = run_names(settings, limit=limit)
+    console.print(result)
+    raise typer.Exit(EXIT_SUCCESS)
+
+
 @curate_app.command("enrich")
 def curate_enrich(limit: int | None = typer.Option(None, help="Max resources")) -> None:
-    """Extract technical metadata into derived sidecars."""
+    """Extract technical metadata into derived sidecars (also refreshes display names)."""
     settings = _settings()
+    names = run_names(settings, limit=limit)
     result = run_enrich(settings, limit=limit)
-    console.print(result)
+    console.print({"names": names, "enrich": result})
     raise typer.Exit(EXIT_SUCCESS)
 
 
@@ -335,11 +346,20 @@ def archive_pack(
 
 @app.command("archive-restore-check")
 def archive_restore_check(
-    pack: Path = typer.Option(..., exists=True, file_okay=False, help="Archive pack dir"),
+    pack: Path | None = typer.Option(None, exists=True, help="Archive pack directory"),
+    manifest: Path | None = typer.Option(
+        None, "--manifest", exists=True, help="ARCHIVE_MANIFEST.json or pack directory"
+    ),
     full: bool = typer.Option(False, help="Verify every manifest entry"),
 ) -> None:
     """Verify archive pack volumes against ARCHIVE_MANIFEST.json."""
-    result = run_archive_restore_check(pack, full=full)
+    target = pack or manifest
+    if target is None:
+        console.print("Provide --pack <dir> or --manifest <path>")
+        raise typer.Exit(EXIT_CONFIG)
+    if target.is_file():
+        target = target.parent
+    result = run_archive_restore_check(target, full=full)
     console.print(result)
     code = EXIT_SUCCESS if result.get("ok") else EXIT_BACKUP_VERIFY
     raise typer.Exit(code)
