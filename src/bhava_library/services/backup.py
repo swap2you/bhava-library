@@ -32,11 +32,9 @@ def _win_long(path: Path) -> str:
     resolved path unchanged — the Windows long-path prefix breaks Linux/macOS.
     """
     resolved = str(path.resolve())
-    if sys.platform != "win32":
-        return resolved
-    if resolved.startswith("\\\\?\\"):
-        return resolved
-    return "\\\\?\\" + resolved
+    if sys.platform == "win32" and not resolved.startswith("\\\\?\\"):
+        return "\\\\?\\" + resolved
+    return resolved
 
 
 def _rel_for(settings: Settings, path: Path) -> Path:

@@ -2,82 +2,94 @@
 
 **Repository:** https://github.com/swap2you/bhava-library  
 **Visibility:** public  
-**Base commit at phase start:** `783811455b4db77c4fe0f1018fd7d38568240716`  
+**Phase-start commit:** `783811455b4db77c4fe0f1018fd7d38568240716`  
+**Current commit (at report authoring):** see `git rev-parse HEAD` / latest `main`  
 **Branch:** `main`
 
 ## Identity
 
 Corrected active identity everywhere (rules/config/docs/tests):
 
-- Copyright owner: **Svarna Gauranga Das**
-- Publisher: **Dauji Publication**
-- Project: **Bhāva**
-- Location: **Harrisburg, Pennsylvania, USA**
-- Email: **svarnagaurangdas@gmail.com**
-- Phone: none
+| Field | Value |
+|---|---|
+| Copyright owner | **Svarna Gauranga Das** |
+| Publisher | **Dauji Publication** |
+| Project | **Bhāva** |
+| Location | **Harrisburg, Pennsylvania, USA** |
+| Email | **svarnagaurangdas@gmail.com** |
+| Phone | none |
 
-`.cursor/rules/03-copyright.mdc` updated. Extracted package directory:
+Obsolete spellings (`Swarna Gauranga Das`, `SwarnaGaurangaDas@gmail.com`) are rejected by config validation and called out in `.cursor/rules/03-copyright.mdc`.
 
-- untracked from Git;
-- excluded in `.cursorignore` and `.gitignore`;
-- marked `SUPERSEDED.md` at package root.
+Extracted package `Bhava_Library_Cursor_Implementation_Package_v1.0/`:
+
+- removed from Git tracking;
+- excluded via `.cursorignore` and `.gitignore`;
+- marked with local `SUPERSEDED.md` (historical only).
 
 ## CI
 
-Added `.github/workflows/ci.yml` (Python 3.13 + uv):
+Workflow: `.github/workflows/ci.yml` (Python 3.13 + uv)
 
-- ruff check/format, mypy, pytest, bandit, pip-audit, binary/data tracking guard
+Runs: ruff check/format, mypy, pytest, bandit, pip-audit, binary/data tracking guard.
 
-Local gate: **45 passed** (`uv run pytest`).
+Local gate: **55 passed**.
 
 ## Core reconciliation
 
 | Metric | Count |
 |---|---|
-| Jobs complete | 1650–1657 (see live status) |
-| Terminal failures | 24–31 classified |
-| Indexed verified files | 1654 |
+| Core indexed | 1654 |
+| Core terminal failed | 24 |
 | Quarantined | 3 |
-| Duplicate groups linked | 44 |
-| Audio deferred (pre-audio phase) | 789 |
+| Core local files (incl. quarantine) | 1657 |
+| Jobs complete (all profiles) | 2437 |
+| Jobs terminal_failure (all) | 33 |
+| Duplicate file links | 78 |
 
-Reports:
+Classification report (`reports/CORE_RECONCILIATION.md` / `.csv`):
 
-- `reports/CORE_RECONCILIATION.md`
-- `reports/CORE_RECONCILIATION.csv`
-- `reports/generated/core-reconciliation-*.csv`
+| Classification | Count |
+|---|---|
+| completed | 3 |
+| source-empty | 7 |
+| terminal-manual-review | 24 |
+| source-broken / landing-page-unresolved / access-restricted / retryable-transient | 0 |
 
-Classifications used: completed, source-empty, source-broken, landing-page-unresolved, access-restricted, retryable-transient, terminal-manual-review.
+Previous backup skipped long paths (now handled via `\\?\` on Windows; incomplete backups fail verification):
 
-Previous backup skipped long paths (documented in reconciliation):
+1. Bhakta Burfi fingerprint painting book PDF  
+2. 1996 curriculum correspondence PDF  
 
-1. Bhakta Burfi fingerprint painting book PDF (long path)
-2. 1996 curriculum correspondence PDF (long path / empty source)
+## Audio
 
-## Backup behavior fix
+| Metric | Value |
+|---|---|
+| Candidates | 789 |
+| Complete | 787 |
+| Terminal | 2 (`EMPTY_REMOTE`, `HTTP_404`) |
+| Audio bytes on disk | 10,325,670,104 (~9.62 GiB) |
+| Exit from acquire | 10 (`EXIT_PARTIAL`) due to 2 terminals |
 
-Backups with required skipped files now:
+Estimate: `reports/AUDIO_ESTIMATE.md`. Video not downloaded.
 
-- record skipped paths in manifest;
-- set `verification_ok = 0`;
-- raise `BackupVerifyError` / nonzero exit (`26`);
-- support `--full-verify` and restore `--full`.
+Disk: before audio ~154.7 GiB free; after ~146.1 GiB free.
 
-Same-drive `data/backups` is **not** the durable backup. External target required.
+## Backup
 
-## Audio estimate
+Skipped required files → `verification_ok=0`, nonzero exit `26`, skipped paths in manifest.  
+`--full-verify` / restore `--full` supported.  
+Same-drive `data/backups` is **not** durable. **External target required** (not yet run).
 
-See `reports/AUDIO_ESTIMATE.md`:
+## Tests expanded
 
-- 789 audio candidates; ~9.62 GiB known; 1 unknown; safe to acquire (narrow reserve margin).
+Downloader/backup coverage includes Range resume, Range ignore, ETag restart, pause persistence, connection interrupt, 429/500/400/410, HTML-for-document, length mismatch, unknown size, disk reserve, path traversal, ZIP slip/bomb/exe/malformed, duplicates, Defender unavailable, audio/core profiles, backup skip incompleteness, long-path helper, full backup + restore verification.
 
-## Commands
+## Remaining limitations
 
-```powershell
-.\bhava.ps1 resume --profile core
-.\bhava.ps1 acquire --profile audio
-.\bhava.ps1 backup --target "<EXTERNAL_BACKUP_PATH>"
-.\bhava.ps1 restore-check --target "<EXTERNAL_BACKUP_PATH>" --full
-```
-
-`resume` now accepts `--profile`.
+- Windows Defender MpCmdRun often inconclusive (`exit=2`) — treated as inconclusive, not clean/dirty.
+- 3 ZIP archives quarantined (contain executables).
+- 8 `unknown/` HTML-as-`.bin` legacy core artifacts (manual review).
+- 7 historically empty remote PDFs classified `source-empty`.
+- Final generated report historically labeled audio counts as “deferred”; wording updated to “Audio resources”.
+- External durable backup not yet executed (awaiting path).

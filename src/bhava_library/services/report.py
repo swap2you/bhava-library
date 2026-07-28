@@ -75,8 +75,8 @@ Generated: {stamp}
 ## Catalog
 - Resources: {resources}
 - Resolved / unresolved / broken: {resolved} / {unresolved} / {broken}
-- Audio deferred: {audio}
-- Video deferred: {video}
+- Audio resources: {audio}
+- Video resources: {video}
 
 ## Acquisition
 - Jobs complete / pending: {jobs_complete} / {jobs_pending}
@@ -96,7 +96,9 @@ Generated: {stamp}
 
 ## Continuation
 ```powershell
-.\\bhava.ps1 resume
+.\\bhava.ps1 acquire --profile audio
+.\\bhava.ps1 backup --target "<EXTERNAL_BACKUP_PATH>" --full-verify
+.\\bhava.ps1 restore-check --target "<EXTERNAL_BACKUP_PATH>" --full
 ```
 """
     md_path.write_text(md, encoding="utf-8")
