@@ -148,9 +148,7 @@ def create_pre_curation_snapshot(repo_root: Path) -> Path:
         csv_lines.append(
             f"{e['relative_path']},{e['size_bytes']},{e.get('sha256') or ''},{e['on_disk']}"
         )
-    (snap_dir / "ORIGINAL_INVENTORY.csv").write_text(
-        "\n".join(csv_lines) + "\n", encoding="utf-8"
-    )
+    (snap_dir / "ORIGINAL_INVENTORY.csv").write_text("\n".join(csv_lines) + "\n", encoding="utf-8")
 
     summary = {
         "snapshot_id": manifest["snapshot_id"],
@@ -166,9 +164,7 @@ def create_pre_curation_snapshot(repo_root: Path) -> Path:
         "snapshot_dir": str(snap_dir),
         "inventory_sha256": _sha256_file(inv_path),
         "integrity_ok": (
-            len(missing_on_disk) == 0
-            and len(size_mismatches) == 0
-            and len(catalog_rows) > 0
+            len(missing_on_disk) == 0 and len(size_mismatches) == 0 and len(catalog_rows) > 0
         ),
     }
     (snap_dir / "SUMMARY.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
