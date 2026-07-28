@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ project }} — Local Search</title>
+  <style>
+    body { font-family: Georgia, serif; margin: 2rem; background: #f7f3ea; color: #1f1a14; }
+    input { width: 70%; padding: 0.5rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { text-align: left; padding: 0.4rem; border-bottom: 1px solid #d9d0c0; }
+  </style>
+</head>
+<body>
+  <h1>{{ project }}</h1>
+  <p>Localhost-only catalog search. Third-party originals are not published from this UI.</p>
+  <form method="get">
+    <input name="q" value="{{ q }}" placeholder="Search title, theme, type…">
+    <button type="submit">Search</button>
+  </form>
+  <table>
+    <thead><tr><th>Title</th><th>Type</th><th>Format</th><th>Theme</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+      <tr>
+        <td>{{ row["title_original"] }}</td>
+        <td>{{ row["media_type"] }}</td>
+        <td>{{ row["media_format"] }}</td>
+        <td>{{ row["theme"] }}</td>
+        <td>{{ row["status"] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

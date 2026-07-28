@@ -1,0 +1,5 @@
+---
+description: Respectful network and access boundaries
+alwaysApply: true
+---
+Use at most two global downloads and one per host. Pace requests, honor Retry-After, validate TLS, and retain resume state. Do not bypass authentication, CAPTCHAs, paywalls, robots restrictions, access controls, or rate limits. Record inaccessible items instead of guessing or circumventing.

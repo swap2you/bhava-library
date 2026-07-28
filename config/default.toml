@@ -1,0 +1,45 @@
+[project]
+name = "Bhāva Library"
+slug = "bhava-library"
+data_dir = "data"
+timezone = "America/New_York"
+
+[source.iskcon_education]
+enabled = true
+index_url = "https://iskconeducation.org/media_library/"
+user_agent = "BhavaLibrary/1.0 (+mailto:svarnagaurangdas@gmail.com)"
+request_delay_seconds = 2.0
+max_connections_per_host = 1
+max_global_downloads = 2
+follow_external_direct_files = true
+allow_authentication = false
+
+[download]
+default_profile = "core"
+initial_batch_cap_gib = 20
+max_file_gib = 2
+chunk_mib = 4
+reserve_gib = 50
+reserve_percent = 15
+temporary_overhead_percent = 10
+temporary_overhead_gib = 2
+resume = true
+verify_tls = true
+audio_enabled = false
+video_enabled = false
+
+[verification]
+sha256 = true
+content_length = true
+signature_detection = true
+windows_defender = true
+mark_verified_read_only = true
+destructive_deduplication = false
+
+[copyright]
+owner = "Svarna Gauranga Das"
+publisher = "Dauji Publication"
+project = "Bhāva"
+location = "Harrisburg, Pennsylvania, USA"
+contact_email = "svarnagaurangdas@gmail.com"
+phone = ""

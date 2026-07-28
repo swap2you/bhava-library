@@ -1,0 +1,5 @@
+---
+description: Autonomous implementation behavior
+alwaysApply: true
+---
+Do not request routine design confirmations. Follow the supplied architecture and proceed phase by phase. Stop only for hard access, disk, integrity, or environment blockers. On stop, persist state, create a blocker report, and provide an exact continuation command.

@@ -1,0 +1,5 @@
+---
+description: Test and validation requirements
+alwaysApply: true
+---
+No real acquisition before unit, integration, safety, and dry-run tests pass. Test disk exhaustion, resume, corruption, path traversal, archives, redirects, unknown sizes, duplicate content, Git guards, and copyright separation. Report exact results; never invent test success.

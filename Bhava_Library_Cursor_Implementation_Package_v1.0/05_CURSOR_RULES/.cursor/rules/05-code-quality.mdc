@@ -1,0 +1,5 @@
+---
+description: Engineering quality
+alwaysApply: true
+---
+Use typed Python, small modules, explicit state machines, structured errors, atomic filesystem operations, database transactions, deterministic IDs, idempotent commands, and stable exit codes. Avoid unnecessary dependencies and hidden global state.

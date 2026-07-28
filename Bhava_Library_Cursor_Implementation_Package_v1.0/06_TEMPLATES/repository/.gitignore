@@ -1,0 +1,55 @@
+# Local data and binaries
+/data/**
+!/data/.gitkeep
+
+# Local configuration
+/config/local.toml
+.env
+.env.*
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Databases and partials
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+*.part
+*.partial
+*.tmp
+
+# Binary/media/reference formats
+*.pdf
+*.epub
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.ogg
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+*.zip
+*.rar
+*.7z
+
+# Logs and generated reports
+/logs/**
+/reports/generated/**

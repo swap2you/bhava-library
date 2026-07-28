@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bhava.local/schemas/original-work.json",
+  "title": "Original Bhava Work",
+  "type": "object",
+  "required": [
+    "work_id",
+    "title",
+    "copyright_owner",
+    "publisher",
+    "publication_status"
+  ],
+  "properties": {
+    "work_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "copyright_owner": {
+      "const": "Swarna Gauranga Das"
+    },
+    "publisher": {
+      "const": "Dauji Publication"
+    },
+    "project": {
+      "const": "Bhāva"
+    },
+    "publication_status": {
+      "enum": [
+        "unpublished",
+        "published",
+        "unknown_review_required"
+      ]
+    },
+    "first_published_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

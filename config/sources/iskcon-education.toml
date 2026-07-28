@@ -1,0 +1,7 @@
+[source]
+source_id = "iskcon-education"
+name = "ISKCON Ministry of Education Media Library"
+adapter = "iskcon_education"
+base_url = "https://iskconeducation.org/"
+index_url = "https://iskconeducation.org/media_library/"
+enabled = true

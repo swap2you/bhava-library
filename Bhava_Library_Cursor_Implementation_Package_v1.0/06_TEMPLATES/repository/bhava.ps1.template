@@ -1,0 +1,31 @@
+param(
+    [Parameter(Position=0)]
+    [string]$Command = "help",
+    [Parameter(ValueFromRemainingArguments=$true)]
+    [string[]]$Arguments
+)
+
+$ErrorActionPreference = "Stop"
+$RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $RepoRoot
+
+function Require-Uv {
+    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+        throw "uv is not installed. Run '.\bhava.ps1 bootstrap' and follow the documented official installation step."
+    }
+}
+
+switch ($Command.ToLowerInvariant()) {
+    "bootstrap" {
+        Write-Host "Bootstrap must install/locate uv, sync the locked environment, initialize directories/database, and run smoke tests."
+        # Cursor implements safely; do not silently execute remote installation scripts.
+    }
+    "help" {
+        Write-Host "Commands: bootstrap doctor scan resolve estimate acquire resume status verify index report backup restore-check serve"
+    }
+    default {
+        Require-Uv
+        & uv run bhava-lib $Command @Arguments
+        exit $LASTEXITCODE
+    }
+}

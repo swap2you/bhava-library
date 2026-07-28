@@ -1,0 +1,75 @@
+[project]
+name = "bhava-library"
+version = "0.1.0"
+description = "Private local-first devotional educational reference library"
+readme = "README.md"
+requires-python = ">=3.13,<3.15"
+dependencies = [
+  "beautifulsoup4>=4.12",
+  "filetype>=1.2",
+  "httpx>=0.28",
+  "platformdirs>=4.3",
+  "pydantic>=2.10",
+  "pydantic-settings>=2.7",
+  "rich>=13.9",
+  "tenacity>=9.0",
+  "typer>=0.15",
+]
+
+[project.optional-dependencies]
+ui = ["fastapi>=0.115", "jinja2>=3.1", "uvicorn>=0.34"]
+dev = [
+  "bandit>=1.8",
+  "coverage>=7.6",
+  "hypothesis>=6.123",
+  "mypy>=1.14",
+  "pip-audit>=2.8",
+  "pytest>=8.3",
+  "pytest-httpx>=0.35",
+  "ruff>=0.9",
+  "types-beautifulsoup4",
+]
+
+[project.scripts]
+bhava-lib = "bhava_library.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bhava_library"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+  "live: tests that touch the live source (deselected by default)",
+  "slow: longer-running tests",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501", "B008"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_unreachable = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+check_untyped_defs = true
+mypy_path = "src"
+packages = ["bhava_library"]
+
+[tool.coverage.run]
+source = ["bhava_library"]
+branch = true
+
+[tool.bandit]
+exclude_dirs = ["tests"]
