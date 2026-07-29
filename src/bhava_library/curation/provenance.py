@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from bhava_library.config import Settings
+from bhava_library.curation.audit import audited_curation_command
 from bhava_library.infrastructure.catalog_queries import PREFERRED_LOCAL_FILE_JOIN
 from bhava_library.infrastructure.database import Database, utc_now
 
@@ -121,6 +122,7 @@ def _candidate_id(resource_id: str, product_type: str) -> str:
     return f"{resource_id}::{product_type}"
 
 
+@audited_curation_command("candidates")
 def run_candidates(settings: Settings, *, limit: int | None = None) -> dict[str, int]:
     db = Database(settings.catalog_db)
     db.migrate()

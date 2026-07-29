@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from bhava_library.config import Settings
+from bhava_library.curation.audit import audited_curation_command
 from bhava_library.infrastructure.database import Database
 
 
@@ -21,6 +22,7 @@ def _load_compare(repo_root: Path):
     return module
 
 
+@audited_curation_command("integrity")
 def run_integrity(settings: Settings) -> dict[str, object]:
     db = Database(settings.catalog_db)
     db.migrate()
