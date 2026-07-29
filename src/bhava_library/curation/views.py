@@ -6,11 +6,15 @@ import csv
 import hashlib
 import html
 import json
+import os
 import re
+import shutil
 import unicodedata
+import uuid
 from pathlib import Path
 
 from bhava_library.config import Settings
+from bhava_library.curation.audit import audited_curation_command
 from bhava_library.infrastructure.catalog_queries import PREFERRED_LOCAL_FILE_JOIN
 from bhava_library.infrastructure.database import Database
 
@@ -34,6 +38,8 @@ _WINDOWS_RESERVED = {
     *(f"com{number}" for number in range(1, 10)),
     *(f"lpt{number}" for number in range(1, 10)),
 }
+_VIEW_SUFFIXES = {".json", ".csv", ".md", ".html"}
+_BINARY_SIGNATURES = (b"%PDF", b"PK\x03\x04", b"\x89PNG", b"\xff\xd8\xff", b"ID3")
 
 
 def _resource_record(row) -> dict[str, object]:
@@ -152,12 +158,10 @@ def _write_html(path: Path, title: str, rows: list[dict[str, object]]) -> None:
     path.write_text("\n".join(body), encoding="utf-8")
 
 
-def run_build_views(settings: Settings) -> dict[str, int]:
-    db = Database(settings.catalog_db)
-    db.migrate()
-    views_root = settings.data_dir / "views"
+def _build_view_tree(db: Database, views_root: Path) -> dict[str, int]:
     resources = _fetch_resources(db)
     base_records = [_resource_record(r) for r in resources]
+    expected_counts: dict[Path, int] = {}
 
     all_view = views_root / "by-all"
     fields = [
@@ -172,6 +176,7 @@ def run_build_views(settings: Settings) -> dict[str, int]:
     _write_csv(all_view / "catalog.csv", base_records, fields)
     _write_md(all_view / "catalog.md", "All catalog resources", base_records)
     _write_html(all_view / "catalog.html", "All catalog resources", base_records)
+    expected_counts[Path("by-all/catalog.json")] = len(base_records)
     written = 4
     slug_collisions = 0
 
@@ -203,10 +208,93 @@ def run_build_views(settings: Settings) -> dict[str, int]:
             _write_csv(out / "index.csv", term_rows, [*fields, "term"])
             _write_md(out / "index.md", f"{dimension}: {term}", term_rows)
             _write_html(out / "index.html", f"{dimension}: {term}", term_rows)
+            expected_counts[(out / "index.json").relative_to(views_root)] = len(term_rows)
             written += 4
 
+    _validate_view_tree(views_root, expected_counts, expected_artifacts=written)
     return {
         "resources": len(resources),
         "artifacts": written,
         "slug_collisions": slug_collisions,
     }
+
+
+def _validate_view_tree(
+    views_root: Path,
+    expected_counts: dict[Path, int],
+    *,
+    expected_artifacts: int,
+) -> None:
+    root = views_root.resolve()
+    files = sorted(path for path in views_root.rglob("*") if path.is_file())
+    if len(files) != expected_artifacts:
+        raise ValueError(
+            f"View artifact count mismatch: expected {expected_artifacts}, found {len(files)}"
+        )
+    for path in files:
+        resolved = path.resolve()
+        if not resolved.is_relative_to(root):
+            raise ValueError(f"Generated view escaped staging root: {path}")
+        if path.suffix.lower() not in _VIEW_SUFFIXES:
+            raise ValueError(f"Unexpected generated view type: {path}")
+        prefix = path.read_bytes()[:16]
+        if any(prefix.startswith(signature) for signature in _BINARY_SIGNATURES):
+            raise ValueError(f"Binary content found in generated view: {path}")
+        path.read_text(encoding="utf-8")
+
+    for relative_json, expected_count in expected_counts.items():
+        json_path = views_root / relative_json
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, list) or len(payload) != expected_count:
+            raise ValueError(f"JSON record count mismatch: {relative_json}")
+        resource_ids = [record.get("resource_id") for record in payload if isinstance(record, dict)]
+        if len(resource_ids) != len(set(resource_ids)):
+            raise ValueError(f"Duplicate resource in generated view: {relative_json}")
+
+        csv_path = json_path.with_suffix(".csv")
+        with csv_path.open("r", encoding="utf-8", newline="") as handle:
+            csv_count = sum(1 for _ in csv.DictReader(handle))
+        if csv_count != expected_count:
+            raise ValueError(f"CSV record count mismatch: {csv_path.relative_to(views_root)}")
+
+        markdown = json_path.with_suffix(".md").read_text(encoding="utf-8")
+        if f"Records: {expected_count}" not in markdown:
+            raise ValueError(f"Markdown record count mismatch: {relative_json}")
+        rendered_html = json_path.with_suffix(".html").read_text(encoding="utf-8")
+        if f"<p>{expected_count} records " not in rendered_html:
+            raise ValueError(f"HTML record count mismatch: {relative_json}")
+
+
+def _publish_view_tree(staging: Path, destination: Path) -> None:
+    backup = destination.with_name(f".{destination.name}-backup-{uuid.uuid4().hex}")
+    moved_existing = False
+    try:
+        if destination.exists():
+            os.replace(destination, backup)
+            moved_existing = True
+        os.replace(staging, destination)
+    except BaseException:
+        if moved_existing and backup.exists() and not destination.exists():
+            os.replace(backup, destination)
+        raise
+    finally:
+        if staging.exists():
+            shutil.rmtree(staging, ignore_errors=True)
+        if backup.exists():
+            shutil.rmtree(backup, ignore_errors=True)
+
+
+@audited_curation_command("build-views")
+def run_build_views(settings: Settings) -> dict[str, int]:
+    db = Database(settings.catalog_db)
+    db.migrate()
+    views_root = settings.data_dir / "views"
+    views_root.parent.mkdir(parents=True, exist_ok=True)
+    staging = views_root.with_name(f".{views_root.name}-staging-{uuid.uuid4().hex}")
+    try:
+        result = _build_view_tree(db, staging)
+        _publish_view_tree(staging, views_root)
+        return result
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise

@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from bhava_library.config import load_settings
+from bhava_library.curation import views as views_module
 from bhava_library.curation.classify import run_classify
 from bhava_library.curation.names import run_names
 from bhava_library.curation.views import (
@@ -153,6 +154,78 @@ def test_view_slug_collisions_are_detected_and_disambiguated() -> None:
     assert collisions == 1
     assert slugs["a/b"] != slugs[r"a\b"]
     assert all("/" not in slug and "\\" not in slug for slug in slugs.values())
+
+
+def test_full_rebuild_removes_stale_term_and_language_views(settings) -> None:
+    run_names(settings)
+    run_classify(settings)
+    db = Database(settings.catalog_db)
+    with db.session() as conn:
+        conn.execute(
+            """
+            INSERT INTO resource_classifications(
+              resource_id, dimension, term, confidence, source, rule_version,
+              review_state, created_at
+            ) VALUES
+              ('BL-VIEW-001', 'topic', 'obsolete-term', 0.8, 'test', 'test',
+               'auto_accepted', datetime('now')),
+              ('BL-VIEW-001', 'language', 'english', 0.8, 'test', 'test',
+               'auto_accepted', datetime('now'))
+            """
+        )
+    run_build_views(settings)
+    root = settings.data_dir / "views"
+    assert (root / "by-topic" / "obsolete-term").is_dir()
+    assert (root / "by-language" / "english").is_dir()
+
+    with db.session() as conn:
+        conn.execute(
+            """
+            DELETE FROM resource_classifications
+            WHERE resource_id = 'BL-VIEW-001'
+              AND ((dimension = 'topic' AND term = 'obsolete-term')
+                OR (dimension = 'language' AND term = 'english'))
+            """
+        )
+    run_build_views(settings)
+    assert not (root / "by-topic" / "obsolete-term").exists()
+    assert not (root / "by-language" / "english").exists()
+
+    unknown_count = db.execute(
+        """
+        SELECT COUNT(DISTINCT resource_id) AS count
+        FROM resource_classifications
+        WHERE dimension = 'language' AND term = 'unknown'
+        """
+    )[0]["count"]
+    unknown_records = json.loads(
+        (root / "by-language" / "unknown" / "index.json").read_text(encoding="utf-8")
+    )
+    assert len(unknown_records) == unknown_count
+
+
+def test_failed_rebuild_does_not_publish_partial_tree(settings, monkeypatch) -> None:
+    run_names(settings)
+    run_classify(settings)
+    run_build_views(settings)
+    root = settings.data_dir / "views"
+    before = {
+        path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()
+    }
+
+    def fail_validation(*args, **kwargs) -> None:
+        raise ValueError("forced validation failure")
+
+    monkeypatch.setattr(views_module, "_validate_view_tree", fail_validation)
+    with pytest.raises(ValueError, match="forced validation failure"):
+        run_build_views(settings)
+
+    after = {
+        path.relative_to(root): path.read_bytes() for path in root.rglob("*") if path.is_file()
+    }
+    assert after == before
+    assert not list(settings.data_dir.glob(".views-staging-*"))
+    assert not list(settings.data_dir.glob(".views-backup-*"))
 
 
 def test_generated_html_escapes_title_ids_terms_paths_and_labels(tmp_path: Path) -> None:
