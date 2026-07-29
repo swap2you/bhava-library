@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from bhava_library.config import load_settings
+from bhava_library.curation.views import run_build_views
 from bhava_library.infrastructure.database import Database
 from bhava_library.infrastructure.hashing import sha256_file
 
@@ -82,6 +83,7 @@ def test_uat_helper_samples_and_reports_without_mutating_originals(tmp_path: Pat
     exports.mkdir(parents=True)
     candidate = exports / "candidate.md"
     candidate.write_text("# Metadata only\n", encoding="utf-8")
+    run_build_views(settings)
 
     result = run_uat(settings.repo_root, sample_size=50)
 
@@ -91,6 +93,7 @@ def test_uat_helper_samples_and_reports_without_mutating_originals(tmp_path: Pat
     assert result["audio_metadata_sample"]
     assert result["quarantine_representation"]
     assert result["terminal_state_representation"] == [{"state": "failed", "job_count": 1}]
+    assert not result["generated_view_errors"]
     assert result["ok"]
     assert (original.stat().st_size, sha256_file(original)) == before
 

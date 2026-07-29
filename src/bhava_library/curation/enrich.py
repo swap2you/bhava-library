@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from bhava_library.config import Settings
+from bhava_library.curation.audit import audited_curation_command
 from bhava_library.infrastructure.database import Database, utc_now
 
 EXTRACTOR_VERSION = "enrich-v2.0"
@@ -314,6 +315,7 @@ def write_sidecars(
     return technical_path, metadata_path
 
 
+@audited_curation_command("enrich")
 def run_enrich(settings: Settings, *, limit: int | None = None) -> dict[str, int]:
     db = Database(settings.catalog_db)
     db.migrate()

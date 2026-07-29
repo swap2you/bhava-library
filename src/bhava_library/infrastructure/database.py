@@ -12,7 +12,7 @@ from typing import Any
 from bhava_library.domain.enums import ResourceStatus, validate_transition
 from bhava_library.domain.errors import InvalidStateTransition
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 MIGRATION_001 = """
 PRAGMA foreign_keys = ON;
@@ -324,6 +324,20 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_program_mapping_version
 ON program_mappings(resource_id, program, collection, mapping_version);
 """
 
+MIGRATION_004 = """
+ALTER TABLE program_mappings
+ADD COLUMN confidence REAL NOT NULL DEFAULT 0.0;
+
+ALTER TABLE program_mappings
+ADD COLUMN review_state TEXT NOT NULL DEFAULT 'needs_review';
+
+ALTER TABLE local_files
+ADD COLUMN duplicate_kind TEXT;
+
+ALTER TABLE local_files
+ADD COLUMN reacquisition_required INTEGER NOT NULL DEFAULT 0;
+"""
+
 
 def utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
@@ -398,6 +412,10 @@ class Database:
             if row is None:
                 conn.executescript(MIGRATION_003)
                 self._record_migration(conn, 3)
+            row = conn.execute("SELECT version FROM schema_migrations WHERE version = 4").fetchone()
+            if row is None:
+                conn.executescript(MIGRATION_004)
+                self._record_migration(conn, 4)
             self.seed_taxonomy(conn)
 
     def integrity_check(self) -> str:

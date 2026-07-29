@@ -85,6 +85,7 @@ def _search_rows(
     audience: str,
     age: int | None,
     program: str,
+    include_program_needs_review: bool,
     topic: str,
     festival: str,
     language: str,
@@ -145,10 +146,11 @@ def _search_rows(
             "AND rc.dimension = 'program-use' AND rc.term = ?) "
             "OR EXISTS (SELECT 1 FROM program_mappings pm "
             "WHERE pm.resource_id = r.resource_id "
-            "AND (pm.program = ? OR pm.collection = ?))"
+            "AND (pm.program = ? OR pm.collection = ?) "
+            "AND (? = 1 OR pm.review_state <> 'needs_review'))"
             ")"
         )
-        params.extend([program, program, program])
+        params.extend([program, program, program, int(include_program_needs_review)])
 
     if review_state:
         clauses.append(f"({RESOURCE_REVIEW_STATE_SQL}) = ?")
@@ -218,6 +220,7 @@ def create_app(settings: Settings) -> FastAPI:
         audience: str = Query(""),
         age: int | None = Query(None, ge=0, le=120),
         program: str = Query(""),
+        include_program_needs_review: bool = Query(False),
         topic: str = Query(""),
         festival: str = Query(""),
         language: str = Query(""),
@@ -246,6 +249,7 @@ def create_app(settings: Settings) -> FastAPI:
             audience=audience,
             age=age,
             program=program,
+            include_program_needs_review=include_program_needs_review,
             topic=topic,
             festival=festival,
             language=language,
@@ -273,6 +277,7 @@ def create_app(settings: Settings) -> FastAPI:
                     "audience": audience,
                     "age": age,
                     "program": program,
+                    "include_program_needs_review": include_program_needs_review,
                     "topic": topic,
                     "festival": festival,
                     "language": language,

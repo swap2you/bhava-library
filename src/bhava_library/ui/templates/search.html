@@ -54,6 +54,11 @@
         {% endfor %}
       </select>
     </label>
+    <label>
+      <input name="include_program_needs_review" type="checkbox" value="true"
+             {% if filters.include_program_needs_review %}checked{% endif %}>
+      Include program mappings needing review
+    </label>
     <label>Topic
       <select name="topic">
         <option value="">Any</option>

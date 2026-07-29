@@ -211,7 +211,7 @@ TAXONOMY: dict[str, list[str]] = {
     ],
 }
 
-RULE_VERSION = "rules-v2.0"
+RULE_VERSION = "rules-v2.1"
 
 
 def term_id(dimension: str, value: str) -> str:

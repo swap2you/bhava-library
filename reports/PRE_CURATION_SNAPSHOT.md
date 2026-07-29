@@ -1,8 +1,12 @@
 # Pre-curation snapshot
 
-- Snapshot ID: `pre-curation-20260728T230113Z`
-- Branch: `feature/library-curation-v1`
-- Baseline commit: `17ac6d1ad7fddb3dfe8e47645e43d86476652614`
+- Snapshot ID: `pre-curation-20260729T190813Z`
+- Timestamp: `20260729T190813Z`
+- Repository root: `C:\Development\Workspace\DevotionalRepo\bhava-library`
+- Branch: `fix/curation-quality-v1.1`
+- Baseline commit: `5f857547574d5c530cd3d31dfe8e82e680f6c612`
+- Dirty working tree: **False**
+- Git warnings: `none`
 - Catalog files: **2444**
 - Disk files (originals+quarantine): **2444**
 - Disk bytes: **14604745860** (13.602 GiB)
@@ -11,7 +15,7 @@
 - Extra on disk: **0**
 - Size mismatches: **0**
 - Integrity OK: **True**
-- Local snapshot dir: `C:\Development\Workspace\DevotionalRepo\bhava-library\data\snapshots\pre-curation-20260728T230113Z` (gitignored)
-- Inventory SHA-256: `2d3f801ba6b857027a2475cf9dd79a32bcebcc66c3cedf18ca243bd701929706`
+- Local snapshot dir: `C:\Development\Workspace\DevotionalRepo\bhava-library\data\snapshots\pre-curation-20260729T190813Z` (gitignored)
+- Inventory SHA-256: `d44f8650cfde0f20834ff7ea3725f0c32cd3a85663888232dfd0d40bd0394389`
 
 Originals were not modified.

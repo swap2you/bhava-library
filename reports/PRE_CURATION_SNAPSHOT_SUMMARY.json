@@ -1,6 +1,11 @@
 {
-  "snapshot_id": "pre-curation-20260728T230113Z",
-  "created_at": "20260728T230113Z",
+  "snapshot_id": "pre-curation-20260729T190813Z",
+  "created_at": "20260729T190813Z",
+  "repo_commit": "5f857547574d5c530cd3d31dfe8e82e680f6c612",
+  "branch": "fix/curation-quality-v1.1",
+  "dirty_working_tree": false,
+  "repository_root": "C:\\Development\\Workspace\\DevotionalRepo\\bhava-library",
+  "git_warnings": [],
   "catalog_file_count": 2444,
   "disk_file_count": 2444,
   "disk_total_bytes": 14604745860,
@@ -9,7 +14,7 @@
   "missing_on_disk_count": 0,
   "extra_on_disk_count": 0,
   "size_mismatch_count": 0,
-  "snapshot_dir": "C:\\Development\\Workspace\\DevotionalRepo\\bhava-library\\data\\snapshots\\pre-curation-20260728T230113Z",
-  "inventory_sha256": "2d3f801ba6b857027a2475cf9dd79a32bcebcc66c3cedf18ca243bd701929706",
+  "snapshot_dir": "C:\\Development\\Workspace\\DevotionalRepo\\bhava-library\\data\\snapshots\\pre-curation-20260729T190813Z",
+  "inventory_sha256": "d44f8650cfde0f20834ff7ea3725f0c32cd3a85663888232dfd0d40bd0394389",
   "integrity_ok": true
 }
