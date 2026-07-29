@@ -1,0 +1,5 @@
+---
+description: Logical classification
+alwaysApply: true
+---
+Do not force a resource into one physical folder. Use multi-dimensional normalized taxonomy with evidence, confidence, and review state. Generate lightweight views only.

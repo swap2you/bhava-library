@@ -11,6 +11,19 @@ from rich.table import Table
 from bhava_library import __version__
 from bhava_library.config import Settings, load_settings
 from bhava_library.constants import EXIT_BACKUP_VERIFY, EXIT_CONFIG, EXIT_INTERNAL, EXIT_SUCCESS
+from bhava_library.curation import (
+    run_archive_pack,
+    run_archive_restore_check,
+    run_build_views,
+    run_candidates,
+    run_classify,
+    run_enrich,
+    run_integrity,
+    run_names,
+    run_review_report,
+    run_snapshot,
+    run_sunday_school,
+)
 from bhava_library.domain.errors import BackupVerifyError, BhavaError
 from bhava_library.infrastructure.database import Database
 from bhava_library.infrastructure.filesystem import ensure_dirs
@@ -34,7 +47,9 @@ app = typer.Typer(
     add_completion=False,
 )
 copyright_app = typer.Typer(help="Original Bhāva/Dauji publication records only")
+curate_app = typer.Typer(help="Metadata curation (never modifies originals)")
 app.add_typer(copyright_app, name="copyright")
+app.add_typer(curate_app, name="curate")
 console = Console(force_terminal=False, legacy_windows=False)
 
 
@@ -223,6 +238,131 @@ def restore_check(
         raise typer.Exit(EXIT_BACKUP_VERIFY) from exc
     console.print(result)
     raise typer.Exit(EXIT_SUCCESS)
+
+
+@curate_app.command("snapshot")
+def curate_snapshot() -> None:
+    """Create a pre-curation-style originals inventory snapshot."""
+    settings = _settings()
+    path = run_snapshot(settings)
+    console.print(f"Wrote snapshot {path}")
+    raise typer.Exit(EXIT_SUCCESS)
+
+
+@curate_app.command("names")
+def curate_names(limit: int | None = typer.Option(None, help="Max resources")) -> None:
+    """Generate clean display titles/slugs without renaming originals."""
+    settings = _settings()
+    result = run_names(settings, limit=limit)
+    console.print(result)
+    raise typer.Exit(EXIT_SUCCESS)
+
+
+@curate_app.command("enrich")
+def curate_enrich(limit: int | None = typer.Option(None, help="Max resources")) -> None:
+    """Extract technical metadata into derived sidecars (also refreshes display names)."""
+    settings = _settings()
+    names = run_names(settings, limit=limit)
+    result = run_enrich(settings, limit=limit)
+    console.print({"names": names, "enrich": result})
+    raise typer.Exit(EXIT_SUCCESS)
+
+
+@curate_app.command("classify")
+def curate_classify(limit: int | None = typer.Option(None, help="Max resources")) -> None:
+    """Apply deterministic taxonomy classification rules."""
+    settings = _settings()
+    result = run_classify(settings, limit=limit)
+    console.print(result)
+    raise typer.Exit(EXIT_SUCCESS)
+
+
+@curate_app.command("build-views")
+def curate_build_views() -> None:
+    """Generate HTML/CSV/JSON/MD logical views under data/views/."""
+    settings = _settings()
+    result = run_build_views(settings)
+    console.print(result)
+    raise typer.Exit(EXIT_SUCCESS)
+
+
+@curate_app.command("review-report")
+def curate_review_report() -> None:
+    """Export low-confidence classification review queue CSV."""
+    settings = _settings()
+    path = run_review_report(settings)
+    console.print(f"Wrote {path}")
+    raise typer.Exit(EXIT_SUCCESS)
+
+
+@curate_app.command("integrity")
+def curate_integrity() -> None:
+    """Compare originals inventory to pre-curation snapshot + DB pragma."""
+    settings = _settings()
+    result = run_integrity(settings)
+    console.print(result)
+    code = EXIT_SUCCESS if result.get("ok") else EXIT_INTERNAL
+    raise typer.Exit(code)
+
+
+@curate_app.command("sunday-school")
+def curate_sunday_school(limit: int | None = typer.Option(None, help="Max resources")) -> None:
+    """Build Sunday-school educational profiles and program mappings."""
+    settings = _settings()
+    result = run_sunday_school(settings, limit=limit)
+    console.print(result)
+    raise typer.Exit(EXIT_SUCCESS)
+
+
+@curate_app.command("candidates")
+def curate_candidates(limit: int | None = typer.Option(None, help="Max candidates")) -> None:
+    """Export Bhāva production candidate metadata (no binaries)."""
+    settings = _settings()
+    result = run_candidates(settings, limit=limit)
+    console.print(result)
+    raise typer.Exit(EXIT_SUCCESS)
+
+
+@app.command("archive-pack")
+def archive_pack(
+    dest: str | None = typer.Option(None, help="Output directory"),
+    volume_size_mib: int = typer.Option(1900, help="Max volume size in MiB"),
+    dry_run: bool = typer.Option(False, help="Plan volumes without writing tar.gz"),
+    limit: int | None = typer.Option(None, help="Limit files (testing)"),
+) -> None:
+    """Create split-volume archive of catalog, derived, views, and originals."""
+    settings = _settings()
+    out = Path(dest) if dest else None
+    result = run_archive_pack(
+        settings,
+        dest=out,
+        volume_size_mib=volume_size_mib,
+        dry_run=dry_run,
+        limit_files=limit,
+    )
+    console.print(result)
+    raise typer.Exit(EXIT_SUCCESS)
+
+
+@app.command("archive-restore-check")
+def archive_restore_check(
+    pack: Path | None = typer.Option(None, exists=True, help="Archive pack directory"),
+    manifest: Path | None = typer.Option(
+        None, "--manifest", exists=True, help="ARCHIVE_MANIFEST.json or pack directory"
+    ),
+    full: bool = typer.Option(False, help="Verify every manifest entry"),
+) -> None:
+    """Verify archive pack volumes against ARCHIVE_MANIFEST.json."""
+    target = pack or manifest
+    if target is None:
+        console.print("Provide --pack <dir> or --manifest <path>")
+        raise typer.Exit(EXIT_CONFIG)
+    if target.is_file():
+        target = target.parent
+    result = run_archive_restore_check(target, full=full)
+    console.print(result)
+    code = EXIT_SUCCESS if result.get("ok") else EXIT_BACKUP_VERIFY
+    raise typer.Exit(code)
 
 
 @app.command()

@@ -1,0 +1,5 @@
+---
+description: Phase quality gates
+alwaysApply: true
+---
+After every phase run tests, database integrity, Git safety, and exact original path/hash/byte reconciliation. Commit only green phases. Never invent validation results.

@@ -1,0 +1,5 @@
+---
+description: Immutable originals
+alwaysApply: true
+---
+Never modify, rename, move, overwrite, watermark, convert, or delete data/originals. All curation is metadata, sidecar, index, or logical-view based. Any original path/hash/byte change blocks the phase.

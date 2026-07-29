@@ -1,0 +1,15 @@
+{
+  "snapshot_id": "pre-curation-20260728T230113Z",
+  "created_at": "20260728T230113Z",
+  "catalog_file_count": 2444,
+  "disk_file_count": 2444,
+  "disk_total_bytes": 14604745860,
+  "disk_total_gib": 13.602,
+  "catalog_total_bytes": 14604745860,
+  "missing_on_disk_count": 0,
+  "extra_on_disk_count": 0,
+  "size_mismatch_count": 0,
+  "snapshot_dir": "C:\\Development\\Workspace\\DevotionalRepo\\bhava-library\\data\\snapshots\\pre-curation-20260728T230113Z",
+  "inventory_sha256": "2d3f801ba6b857027a2475cf9dd79a32bcebcc66c3cedf18ca243bd701929706",
+  "integrity_ok": true
+}

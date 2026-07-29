@@ -1,0 +1,5 @@
+---
+description: GitHub storage safety
+alwaysApply: true
+---
+Never add data/** to ordinary Git and never upload archive content to a public repository. Optional GitHub snapshots use private release assets with split volumes and explicit owner approval; they are not the sole backup.

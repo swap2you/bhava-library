@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Independent Creation Record",
+  "type": "object",
+  "required": [
+    "candidate_id",
+    "creator",
+    "new_elements",
+    "similarity_review"
+  ],
+  "properties": {
+    "candidate_id": {
+      "type": "string"
+    },
+    "creator": {
+      "type": "string"
+    },
+    "new_elements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "canonical_overlaps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "references_seen": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "similarity_review": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_started",
+            "pass",
+            "revise",
+            "blocked"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}
