@@ -14,6 +14,7 @@ from bhava_library.infrastructure.hashing import sha256_file
 from bhava_library.infrastructure.mime import detect_type, extension_of
 from bhava_library.infrastructure.windows_defender import scan_file
 from bhava_library.logging import get_logger
+from bhava_library.services.deduplicate import TRUNCATED_SOURCE_MAX_BYTES, _collision_kind
 
 logger = get_logger("bhava.verify")
 
@@ -148,15 +149,37 @@ def verify_local_file(
     with db.session() as conn:
         # Duplicate grouping
         dup = conn.execute(
-            "SELECT file_id FROM local_files WHERE sha256=? AND resource_id<>? AND quarantine_reason IS NULL",
+            """
+            SELECT file_id, size_bytes
+            FROM local_files
+            WHERE sha256 = ? AND resource_id <> ? AND quarantine_reason IS NULL
+            ORDER BY file_id
+            LIMIT 1
+            """,
             (digest, resource_id),
         ).fetchone()
+        duplicate_kind = _collision_kind(size) if dup else None
+        reacquisition_required = int(size <= TRUNCATED_SOURCE_MAX_BYTES)
+        if dup:
+            conn.execute(
+                """
+                UPDATE local_files
+                SET duplicate_kind = ?, reacquisition_required = ?
+                WHERE file_id = ?
+                """,
+                (
+                    duplicate_kind,
+                    int(duplicate_kind != "duplicate-content"),
+                    dup["file_id"],
+                ),
+            )
         conn.execute(
             """
             INSERT OR REPLACE INTO local_files(
               file_id, resource_id, relative_path, size_bytes, sha256,
-              detected_type, verified_at, read_only, duplicate_of_file_id, quarantine_reason
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+              detected_type, verified_at, read_only, duplicate_of_file_id, quarantine_reason,
+              duplicate_kind, reacquisition_required
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
             """,
             (
                 f"file-{resource_id}",
@@ -168,6 +191,8 @@ def verify_local_file(
                 utc_now(),
                 1 if settings.verification.mark_verified_read_only else 0,
                 dup["file_id"] if dup else None,
+                duplicate_kind,
+                reacquisition_required,
             ),
         )
         conn.execute(

@@ -8,7 +8,7 @@ forms = ["curriculum", "lesson-plan", "worksheet", "activity-book", "illustrated
 duration_minutes = 75
 teacher_prep = "Review lesson objectives and prepare classroom materials"
 assumptions = ["weekly class", "mixed experience"]
-version = "programs-v1"
+version = "programs-v1.1"
 
 [[programs]]
 key = "bal-gopal"
@@ -20,7 +20,7 @@ forms = ["coloring-page", "coloring-book", "illustrated-storybook", "flashcard",
 duration_minutes = 45
 teacher_prep = "Prepare short sensory and movement activities"
 assumptions = ["adult assistance", "pre-reader friendly"]
-version = "programs-v1"
+version = "programs-v1.1"
 
 [[programs]]
 key = "damodara"
@@ -32,7 +32,7 @@ forms = ["curriculum", "activity-book", "worksheet", "craft", "prayer", "song-ly
 duration_minutes = 60
 teacher_prep = "Review vocabulary and prepare guided activity"
 assumptions = ["beginning reader", "group instruction"]
-version = "programs-v1"
+version = "programs-v1.1"
 
 [[programs]]
 key = "gopinath"
@@ -44,7 +44,7 @@ forms = ["curriculum", "syllabus", "student-workbook", "presentation", "drama-sc
 duration_minutes = 75
 teacher_prep = "Prepare discussion prompts and scripture references"
 assumptions = ["independent reading", "discussion ready"]
-version = "programs-v1"
+version = "programs-v1.1"
 
 [[programs]]
 key = "gurukula"
@@ -56,7 +56,7 @@ forms = ["curriculum", "syllabus", "teacher-guide", "student-workbook", "assessm
 duration_minutes = 90
 teacher_prep = "Sequence material within the school curriculum"
 assumptions = ["regular attendance", "trained teacher"]
-version = "programs-v1"
+version = "programs-v1.1"
 
 [[programs]]
 key = "homeschool"
@@ -68,7 +68,7 @@ forms = ["curriculum", "teacher-guide", "student-workbook", "worksheet", "audio-
 duration_minutes = 60
 teacher_prep = "Select level and adapt pacing to the learner"
 assumptions = ["caregiver facilitation", "flexible schedule"]
-version = "programs-v1"
+version = "programs-v1.1"
 
 [[programs]]
 key = "family-bhakti"
@@ -80,7 +80,7 @@ forms = ["illustrated-storybook", "prayer", "song-lyrics", "kirtan", "craft", "g
 duration_minutes = 30
 teacher_prep = "Choose one shared practice and an age-flexible prompt"
 assumptions = ["mixed ages", "family participation"]
-version = "programs-v1"
+version = "programs-v1.1"
 
 [[programs]]
 key = "youth"
@@ -92,4 +92,4 @@ forms = ["curriculum", "presentation", "drama-script", "game", "lecture-audio", 
 duration_minutes = 90
 teacher_prep = "Prepare facilitated discussion and practical application"
 assumptions = ["peer discussion", "age-appropriate safeguarding"]
-version = "programs-v1"
+version = "programs-v1.1"

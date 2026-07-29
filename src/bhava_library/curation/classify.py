@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from bhava_library.config import Settings
+from bhava_library.curation.audit import audited_curation_command
 from bhava_library.curation.taxonomy_seed import RULE_VERSION
 from bhava_library.infrastructure.database import Database, utc_now
 
@@ -45,52 +46,109 @@ def _match_all(
     ]
 
 
-def _content_form(text: str) -> ClassificationHit:
-    rules: list[tuple[str, str, float]] = [
-        ("coloring-book", r"\bcolou?r(?:ing)?[\s_-]*book\b", 0.94),
-        ("coloring-page", r"\bcolou?r(?:ing)?[\s_-]*(?:page|sheet)\b", 0.92),
-        ("curriculum", r"\bcurricul(?:um|a)\b|course\s+of\s+study", 0.91),
-        ("syllabus", r"\bsyllabus\b", 0.92),
-        ("activity-book", r"\bactivity[\s_-]*book\b", 0.92),
-        ("illustrated-storybook", r"\b(?:illustrated\s+)?story[\s_-]*book\b", 0.9),
-        ("worksheet", r"worksheet|activity\s*sheet", 0.88),
-        ("crossword", r"crossword", 0.9),
-        ("word-search", r"word\s*search", 0.9),
-        ("connect-the-dots", r"connect\s*(?:the\s*)?dots?|dot[\s_-]*to[\s_-]*dot", 0.9),
-        ("maze", r"\bmazes?\b", 0.9),
-        ("matching", r"\bmatch(?:ing)?\s+(?:game|activity|exercise|pairs?)\b", 0.86),
-        ("sequencing", r"\bsequenc(?:e|ing)\s+(?:cards?|activity|events?)\b", 0.86),
-        ("lesson-plan", r"lesson\s*plan", 0.88),
-        ("teacher-guide", r"teacher('s|)\s*guide|teachers\s*guide", 0.88),
-        ("student-workbook", r"workbook|student\s*book", 0.85),
-        ("comic", r"\bcomic\b", 0.85),
-        ("drama-script", r"\b(?:drama|play|skit)\s*(?:script)?\b", 0.88),
-        ("song-lyrics", r"\b(?:song\s*)?lyrics?\b", 0.88),
-        ("prayer-audio", r"\bprayer\b.*\b(?:mp3|wav|audio)\b|\baudio\b.*\bprayer\b", 0.9),
-        ("drama-audio", r"\b(?:drama|play)\b.*\b(?:mp3|wav|audio)\b", 0.88),
-        ("pronunciation-audio", r"\bpronunciation\b.*\b(?:mp3|wav|audio)\b", 0.88),
-        ("curriculum-audio", r"\bcurricul(?:um|a)\b.*\b(?:mp3|wav|audio)\b", 0.86),
-        ("audio-story", r"audio\s*story|story\s*audio|audiobook", 0.88),
-        ("lecture-audio", r"\b(?:lecture|seminar|class)\b.*\b(?:mp3|wav|audio)\b", 0.84),
-        ("kirtan", r"\bkirtan\b", 0.86),
-        ("bhajan", r"\bbhajan\b", 0.86),
-        ("prayer", r"\bprayer\b|\bpranama\b", 0.82),
-        ("presentation", r"\bpresentation\b|power\s*point|\bpptx?\b|slide\s*deck", 0.88),
-        ("poster", r"\bposter\b", 0.8),
-        ("flashcard", r"flash\s*card", 0.85),
-        ("craft", r"\bcraft\b", 0.78),
-        ("game", r"\bgames?\b", 0.8),
-        ("quiz", r"\bquiz\b|assessment", 0.82),
-        ("archive-bundle", r"\.zip$|archive|bundle", 0.7),
-    ]
-    hit = _match_any(text, rules)
-    if hit:
-        return ClassificationHit(
-            "content-form", hit.term, hit.confidence, hit.excerpt, hit.classifier
+SPECIFIC_CONTENT_FORM_RULES: list[tuple[str, str, float]] = [
+    ("crossword", r"\bcrosswords?\b", 0.94),
+    ("word-search", r"\bword[\s_-]*search(?:es)?\b", 0.94),
+    ("connect-the-dots", r"\bconnect[\s_-]*(?:the[\s_-]*)?dots?\b|dot[\s_-]*to[\s_-]*dot", 0.93),
+    ("maze", r"\bmazes?\b", 0.92),
+    ("matching", r"\bmatch(?:ing)?(?:\s+(?:game|activity|exercise|pairs?))?\b", 0.88),
+    ("sequencing", r"\bsequenc(?:e|ing)(?:\s+(?:cards?|activity|events?))?\b", 0.88),
+    ("coloring-book", r"\bcolou?r(?:ing)?[\s_-]*book\b", 0.94),
+    ("coloring-page", r"\bcolou?r(?:ing)?[\s_-]*(?:page|sheet)\b", 0.92),
+    ("craft", r"\bcrafts?\b", 0.88),
+    ("flashcard", r"\bflash[\s_-]*cards?\b", 0.9),
+    ("poster", r"\bposters?\b", 0.88),
+    ("quiz", r"\bquiz(?:zes)?\b|\bassessment\b", 0.9),
+    ("song-lyrics", r"\b(?:song[\s_-]*)?lyrics?\b", 0.9),
+    ("prayer", r"\bprayers?\b|\bpranama\b", 0.88),
+    ("kirtan", r"\bkirtans?\b", 0.92),
+    ("bhajan", r"\bbhajans?\b", 0.92),
+    ("drama-script", r"\b(?:drama|play|skit)(?:[\s_-]+scripts?)?\b|\bscripts?\b", 0.9),
+    ("comic", r"\bcomics?\b", 0.92),
+    ("activity-book", r"\bactivity[\s_-]*book\b", 0.92),
+    ("worksheet", r"\bworksheets?\b|activity[\s_-]*sheet", 0.9),
+    ("illustrated-storybook", r"\b(?:illustrated[\s_-]+)?story[\s_-]*books?\b", 0.9),
+    ("lesson-plan", r"\blesson[\s_-]*plans?\b", 0.9),
+    ("teacher-guide", r"\bteacher(?:'s|s)?[\s_-]*guides?\b", 0.9),
+    ("presentation", r"\bpresentations?\b|power[\s_-]*point|\bpptx?\b|slide[\s_-]*deck", 0.9),
+]
+
+BROAD_CONTENT_FORM_RULES: list[tuple[str, str, float]] = [
+    ("curriculum", r"\bcurricul(?:um|a)\b|course\s+of\s+study", 0.88),
+    ("syllabus", r"\bsyllab(?:us|i)\b", 0.88),
+    ("teacher-guide", r"\bteacher\s+materials?\b|\bteacher\s+resources?\b", 0.82),
+    ("drama-script", r"\bplay\s+scripts?\b|\bscript\s+library\b", 0.84),
+    ("comic", r"\bcomics?\b", 0.9),
+    ("reference-book", r"\breference\s+books?\b|\bdocuments?\b|\bapplication/pdf\b|\"\.pdf\"", 0.5),
+    ("archive-bundle", r"\barchives?\b|\bbundles?\b|\bapplication/zip\b|\"\.zip\"", 0.78),
+    ("audio-story", r"\baudio\s+stor(?:y|ies)\b|\baudiobooks?\b", 0.86),
+    ("lecture-audio", r"\blectures?\b|\bseminars?\b", 0.78),
+    ("prayer-audio", r"\bprayer\s+audio\b", 0.84),
+    ("pronunciation-audio", r"\bpronunciation\s+audio\b", 0.84),
+    ("drama-audio", r"\bdrama\s+audio\b", 0.82),
+    ("curriculum-audio", r"\bcurriculum\s+audio\b", 0.82),
+    ("music", r"^\s*(?:audio|music)\s*$", 0.65),
+]
+
+
+def _content_form_match(
+    text: str,
+    rules: list[tuple[str, str, float]],
+    *,
+    classifier: str,
+) -> ClassificationHit | None:
+    for term, pattern, confidence in rules:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return ClassificationHit(
+                "content-form",
+                term,
+                confidence,
+                match.group(0)[:160],
+                classifier,
+            )
+    return None
+
+
+def _content_form(
+    *,
+    title: str,
+    filename: str,
+    media_type: str,
+    media_format: str,
+    source_label: str,
+    technical_metadata: str,
+) -> ClassificationHit:
+    for classifier, value in (("title", title), ("filename", filename)):
+        hit = _content_form_match(
+            value,
+            SPECIFIC_CONTENT_FORM_RULES,
+            classifier=classifier,
         )
-    if re.search(r"\.pdf$", text):
-        return ClassificationHit("content-form", "reference-book", 0.5, ".pdf", "extension")
-    return ClassificationHit("content-form", "unknown", 0.3, text[:80], "fallback")
+        if hit:
+            return hit
+
+    metadata_sources = (
+        ("media_type", f"{media_type} {media_format}".strip()),
+        ("source_label", source_label),
+        ("technical_metadata", technical_metadata),
+    )
+    for classifier, value in metadata_sources:
+        hit = _content_form_match(
+            value,
+            BROAD_CONTENT_FORM_RULES,
+            classifier=classifier,
+        )
+        if hit:
+            return hit
+
+    return ClassificationHit(
+        "content-form",
+        "unknown",
+        0.3,
+        (title or filename or media_type or source_label or technical_metadata)[:80],
+        "fallback",
+    )
 
 
 def _audience(text: str) -> ClassificationHit:
@@ -218,6 +276,7 @@ def _scripture(text: str) -> ClassificationHit:
 def _production_opportunity(form: str, confidence: float) -> ClassificationHit:
     mapping = {
         "coloring-page": "printable-candidate",
+        "coloring-book": "printable-candidate",
         "worksheet": "activity-candidate",
         "comic": "original-comic-candidate",
         "lesson-plan": "teacher-guide-candidate",
@@ -259,7 +318,14 @@ def classify_resource(row: dict[str, object]) -> list[ClassificationHit]:
     )
 
     hits: list[ClassificationHit] = []
-    form = _content_form(blob)
+    form = _content_form(
+        title=title,
+        filename=filename,
+        media_type=media_type,
+        media_format=media_format,
+        source_label=source_label,
+        technical_metadata=technical,
+    )
     hits.append(form)
     hits.append(_audience(blob))
     hits.extend(_program_use(blob))
@@ -325,6 +391,7 @@ def _store_classification(conn, resource_id: str, hit: ClassificationHit) -> Non
     )
 
 
+@audited_curation_command("classify")
 def run_classify(settings: Settings, *, limit: int | None = None) -> dict[str, int]:
     db = Database(settings.catalog_db)
     db.migrate()

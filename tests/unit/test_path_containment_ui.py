@@ -112,17 +112,36 @@ def settings(tmp_path: Path):
             VALUES ('BL-UI-001', '{"extraction_status":"partial"}', datetime('now'), 'test')
             """
         )
+        conn.execute(
+            """
+            INSERT INTO program_mappings(
+              resource_id, program, collection, assumptions_json, created_at,
+              mapping_version, confidence, review_state
+            ) VALUES
+              ('BL-UI-001', 'youth', 'youth-core', '{}', datetime('now'),
+               'test', 0.45, 'needs_review'),
+              ('BL-UI-002', 'youth', 'youth-core', '{}', datetime('now'),
+               'test', 0.75, 'auto_accepted')
+            """
+        )
     return s
 
 
-def _rows_for(settings, review_state: str = "") -> list[dict[str, object]]:
+def _rows_for(
+    settings,
+    review_state: str = "",
+    *,
+    program: str = "",
+    include_program_needs_review: bool = False,
+) -> list[dict[str, object]]:
     return _search_rows(
         Database(settings.catalog_db),
         q="",
         content_form="",
         audience="",
         age=None,
-        program="",
+        program=program,
+        include_program_needs_review=include_program_needs_review,
         topic="",
         festival="",
         language="",
@@ -189,3 +208,14 @@ def test_review_state_precedence_and_filtering(settings) -> None:
     assert [row["resource_id"] for row in needs_review] == ["BL-UI-001"]
     auto_accepted = _rows_for(settings, "auto_accepted")
     assert [row["resource_id"] for row in auto_accepted] == ["BL-UI-002"]
+
+
+def test_program_filter_excludes_unverified_age_by_default(settings) -> None:
+    default_rows = _rows_for(settings, program="youth")
+    assert [row["resource_id"] for row in default_rows] == ["BL-UI-002"]
+    review_rows = _rows_for(
+        settings,
+        program="youth",
+        include_program_needs_review=True,
+    )
+    assert {row["resource_id"] for row in review_rows} == {"BL-UI-001", "BL-UI-002"}
