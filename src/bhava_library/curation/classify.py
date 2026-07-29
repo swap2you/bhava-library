@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import re
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,24 +35,52 @@ def _match_any(text: str, patterns: list[tuple[str, str, float]]) -> Classificat
     return None
 
 
+def _match_all(
+    dimension: str, text: str, patterns: list[tuple[str, str, float]]
+) -> list[ClassificationHit]:
+    return [
+        ClassificationHit(dimension, term, confidence, pattern, "regex")
+        for term, pattern, confidence in patterns
+        if re.search(pattern, text, re.IGNORECASE)
+    ]
+
+
 def _content_form(text: str) -> ClassificationHit:
     rules: list[tuple[str, str, float]] = [
-        ("coloring-page", r"color(ing|)\s*(page|sheet|book)", 0.9),
-        ("coloring-book", r"color(ing|)\s*book", 0.92),
+        ("coloring-book", r"\bcolou?r(?:ing)?[\s_-]*book\b", 0.94),
+        ("coloring-page", r"\bcolou?r(?:ing)?[\s_-]*(?:page|sheet)\b", 0.92),
+        ("curriculum", r"\bcurricul(?:um|a)\b|course\s+of\s+study", 0.91),
+        ("syllabus", r"\bsyllabus\b", 0.92),
+        ("activity-book", r"\bactivity[\s_-]*book\b", 0.92),
+        ("illustrated-storybook", r"\b(?:illustrated\s+)?story[\s_-]*book\b", 0.9),
         ("worksheet", r"worksheet|activity\s*sheet", 0.88),
         ("crossword", r"crossword", 0.9),
         ("word-search", r"word\s*search", 0.9),
+        ("connect-the-dots", r"connect\s*(?:the\s*)?dots?|dot[\s_-]*to[\s_-]*dot", 0.9),
+        ("maze", r"\bmazes?\b", 0.9),
+        ("matching", r"\bmatch(?:ing)?\s+(?:game|activity|exercise|pairs?)\b", 0.86),
+        ("sequencing", r"\bsequenc(?:e|ing)\s+(?:cards?|activity|events?)\b", 0.86),
         ("lesson-plan", r"lesson\s*plan", 0.88),
         ("teacher-guide", r"teacher('s|)\s*guide|teachers\s*guide", 0.88),
         ("student-workbook", r"workbook|student\s*book", 0.85),
         ("comic", r"\bcomic\b", 0.85),
-        ("quiz", r"\bquiz\b|assessment", 0.82),
+        ("drama-script", r"\b(?:drama|play|skit)\s*(?:script)?\b", 0.88),
+        ("song-lyrics", r"\b(?:song\s*)?lyrics?\b", 0.88),
+        ("prayer-audio", r"\bprayer\b.*\b(?:mp3|wav|audio)\b|\baudio\b.*\bprayer\b", 0.9),
+        ("drama-audio", r"\b(?:drama|play)\b.*\b(?:mp3|wav|audio)\b", 0.88),
+        ("pronunciation-audio", r"\bpronunciation\b.*\b(?:mp3|wav|audio)\b", 0.88),
+        ("curriculum-audio", r"\bcurricul(?:um|a)\b.*\b(?:mp3|wav|audio)\b", 0.86),
+        ("audio-story", r"audio\s*story|story\s*audio|audiobook", 0.88),
+        ("lecture-audio", r"\b(?:lecture|seminar|class)\b.*\b(?:mp3|wav|audio)\b", 0.84),
+        ("kirtan", r"\bkirtan\b", 0.86),
+        ("bhajan", r"\bbhajan\b", 0.86),
+        ("prayer", r"\bprayer\b|\bpranama\b", 0.82),
+        ("presentation", r"\bpresentation\b|power\s*point|\bpptx?\b|slide\s*deck", 0.88),
         ("poster", r"\bposter\b", 0.8),
         ("flashcard", r"flash\s*card", 0.85),
         ("craft", r"\bcraft\b", 0.78),
-        ("audio-story", r"audio\s*story|story\s*audio", 0.82),
-        ("lecture-audio", r"lecture|seminar", 0.75),
-        ("kirtan", r"kirtan|bhajan", 0.8),
+        ("game", r"\bgames?\b", 0.8),
+        ("quiz", r"\bquiz\b|assessment", 0.82),
         ("archive-bundle", r"\.zip$|archive|bundle", 0.7),
     ]
     hit = _match_any(text, rules)
@@ -83,24 +113,25 @@ def _audience(text: str) -> ClassificationHit:
     return ClassificationHit("audience", "unknown", 0.35, text[:80], "fallback")
 
 
-def _program_use(text: str) -> ClassificationHit:
+def _program_use(text: str) -> list[ClassificationHit]:
     rules: list[tuple[str, str, float]] = [
         ("sunday-school", r"sunday\s*school|ss\s*class", 0.9),
-        ("bal-gopal", r"bal\s*gopal|children('s|)\s*class", 0.85),
+        ("bal-gopal", r"bal\s*gopal", 0.9),
+        ("damodara-class", r"damodara\s*(?:class|program)", 0.9),
+        ("gopinath-class", r"gopinath\s*(?:class|program)", 0.9),
         ("gurukula", r"gurukula", 0.88),
         ("homeschool", r"home\s*school", 0.85),
+        ("family-bhakti", r"family\s*bhakti|family\s*devotion", 0.87),
         ("festival-program", r"festival", 0.75),
-        ("youth-program", r"youth", 0.72),
+        ("youth-program", r"\byouth\b|\bteen", 0.82),
     ]
-    hit = _match_any(text, rules)
-    if hit:
-        return ClassificationHit(
-            "program-use", hit.term, hit.confidence, hit.excerpt, hit.classifier
-        )
-    return ClassificationHit("program-use", "general-reference", 0.45, text[:80], "fallback")
+    hits = _match_all("program-use", text, rules)
+    return hits or [
+        ClassificationHit("program-use", "general-reference", 0.45, text[:80], "fallback")
+    ]
 
 
-def _topic(text: str) -> ClassificationHit:
+def _topic(text: str) -> list[ClassificationHit]:
     rules: list[tuple[str, str, float]] = [
         ("krishna", r"\bkrishna\b", 0.88),
         ("balarama", r"\bbalarama\b", 0.88),
@@ -115,13 +146,12 @@ def _topic(text: str) -> ClassificationHit:
         ("festivals", r"festival|janmastami|gaura\s*purnima", 0.75),
         ("values", r"values|character", 0.7),
     ]
-    hit = _match_any(text, rules)
-    if hit:
-        return ClassificationHit("topic", hit.term, hit.confidence, hit.excerpt, hit.classifier)
-    return ClassificationHit("topic", "devotional-practice", 0.4, text[:80], "fallback")
+    return _match_all("topic", text, rules) or [
+        ClassificationHit("topic", "devotional-practice", 0.4, text[:80], "fallback")
+    ]
 
 
-def _festival(text: str) -> ClassificationHit | None:
+def _festival(text: str) -> list[ClassificationHit]:
     rules: list[tuple[str, str, float]] = [
         ("janmastami", r"janmastami|janmashtami", 0.92),
         ("radhastami", r"radhastami", 0.92),
@@ -133,10 +163,22 @@ def _festival(text: str) -> ClassificationHit | None:
         ("damodara-month", r"damodara|kartik", 0.85),
         ("ratha-yatra", r"ratha\s*yatra", 0.9),
     ]
-    hit = _match_any(text, rules)
-    if hit:
-        return ClassificationHit("festival", hit.term, hit.confidence, hit.excerpt, hit.classifier)
-    return None
+    return _match_all("festival", text, rules)
+
+
+def _person(text: str) -> list[ClassificationHit]:
+    return _match_all(
+        "person",
+        text,
+        [
+            ("krishna", r"\bkrishna\b", 0.9),
+            ("balarama", r"\bbalarama\b", 0.9),
+            ("radha", r"\bradha(?:rani)?\b", 0.9),
+            ("caitanya-mahaprabhu", r"\b(?:caitanya|chaitanya|gauranga)\b", 0.88),
+            ("nityananda", r"\bnityananda\b", 0.9),
+            ("srila-prabhupada", r"\bprabhupada\b", 0.9),
+        ],
+    )
 
 
 def _language(lang_field: str | None, text: str) -> ClassificationHit:
@@ -150,12 +192,13 @@ def _language(lang_field: str | None, text: str) -> ClassificationHit:
             "sanskrit": "sanskrit",
             "spanish": "spanish",
         }
+        values = {value.strip() for value in re.split(r"[,;/|]", norm)}
         for key, term in mapping.items():
-            if key in norm:
+            if key in values:
                 return ClassificationHit("language", term, 0.9, lang_field, "catalog-field")
     if re.search(r"\bhindi\b", text, re.I):
         return ClassificationHit("language", "hindi", 0.7, "hindi", "regex")
-    return ClassificationHit("language", "english", 0.55, text[:40], "default")
+    return ClassificationHit("language", "unknown", 0.3, text[:40], "fallback")
 
 
 def _scripture(text: str) -> ClassificationHit:
@@ -202,24 +245,32 @@ def classify_resource(row: dict[str, object]) -> list[ClassificationHit]:
     rel = str(row.get("relative_path") or "")
     filename = Path(rel).name if rel else ""
     media_type = str(row.get("media_type") or "")
+    media_format = str(row.get("media_format") or "")
     profile = str(row.get("profile") or "")
+    source_label = str(row.get("source_label") or "")
+    theme = str(row.get("theme") or "")
+    technical = str(row.get("technical_metadata_json") or "")
+    with suppress(TypeError, ValueError):
+        technical = json.dumps(json.loads(technical), sort_keys=True) if technical else ""
     language = row.get("language")
-    blob = _norm(f"{title} {filename} {media_type} {profile}")
+    blob = _norm(
+        f"{title} {filename} {media_type} {media_format} {profile} "
+        f"{source_label} {theme} {technical}"
+    )
 
     hits: list[ClassificationHit] = []
     form = _content_form(blob)
     hits.append(form)
     hits.append(_audience(blob))
-    hits.append(_program_use(blob))
-    hits.append(_topic(blob))
-    fest = _festival(blob)
-    if fest:
-        hits.append(fest)
+    hits.extend(_program_use(blob))
+    hits.extend(_topic(blob))
+    hits.extend(_person(blob))
+    hits.extend(_festival(blob))
     hits.append(_language(str(language) if language else None, blob))
     hits.append(_scripture(blob))
     hits.append(_production_opportunity(form.term, form.confidence))
     hits.append(_reference_boundary())
-    return hits
+    return list({(hit.dimension, hit.term): hit for hit in hits}.values())
 
 
 def _review_state(confidence: float) -> str:
@@ -239,8 +290,7 @@ def _store_classification(conn, resource_id: str, hit: ClassificationHit) -> Non
           confidence = excluded.confidence,
           source = excluded.source,
           rule_version = excluded.rule_version,
-          review_state = excluded.review_state,
-          created_at = excluded.created_at
+          review_state = excluded.review_state
         """,
         (
             resource_id,
@@ -258,6 +308,9 @@ def _store_classification(conn, resource_id: str, hit: ClassificationHit) -> Non
         INSERT INTO classification_evidence(
           resource_id, dimension, term, classifier, excerpt, confidence, rule_version, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(resource_id, dimension, term, classifier, rule_version) DO UPDATE SET
+          excerpt = excluded.excerpt,
+          confidence = excluded.confidence
         """,
         (
             resource_id,
@@ -277,9 +330,12 @@ def run_classify(settings: Settings, *, limit: int | None = None) -> dict[str, i
     db.migrate()
     sql = """
         SELECT r.resource_id, r.title_original, r.media_type, r.media_format,
-               r.profile, r.language, lf.relative_path
+               r.profile, r.language, r.source_label, r.theme,
+               (SELECT MIN(lf.relative_path) FROM local_files lf
+                WHERE lf.resource_id = r.resource_id) AS relative_path,
+               tm.payload_json AS technical_metadata_json
         FROM resources r
-        LEFT JOIN local_files lf ON lf.resource_id = r.resource_id
+        LEFT JOIN technical_metadata tm ON tm.resource_id = r.resource_id
         WHERE r.removed_at IS NULL
         ORDER BY r.resource_id
     """
@@ -293,6 +349,14 @@ def run_classify(settings: Settings, *, limit: int | None = None) -> dict[str, i
     with db.session() as conn:
         for row in rows:
             hits = classify_resource(dict(row))
+            conn.execute(
+                "DELETE FROM classification_evidence WHERE resource_id = ?",
+                (row["resource_id"],),
+            )
+            conn.execute(
+                "DELETE FROM resource_classifications WHERE resource_id = ?",
+                (row["resource_id"],),
+            )
             for hit in hits:
                 _store_classification(conn, row["resource_id"], hit)
                 labels += 1

@@ -19,8 +19,8 @@ def curation_settings(tmp_path: Path):
     )
 
 
-def test_schema_version_is_two() -> None:
-    assert SCHEMA_VERSION == 2
+def test_schema_version_is_three() -> None:
+    assert SCHEMA_VERSION == 3
 
 
 def test_migration_creates_curation_tables(curation_settings) -> None:
@@ -28,7 +28,12 @@ def test_migration_creates_curation_tables(curation_settings) -> None:
     db.migrate()
     rows = db.execute("SELECT version FROM schema_migrations ORDER BY version")
     versions = [r["version"] for r in rows]
-    assert versions == [1, 2]
+    assert versions == [1, 2, 3]
+    indexes = {
+        r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='index' ORDER BY name")
+    }
+    assert "uq_classification_evidence_rule" in indexes
+    assert "uq_program_mapping_version" in indexes
 
     tables = {
         r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")

@@ -12,7 +12,7 @@ from typing import Any
 from bhava_library.domain.enums import ResourceStatus, validate_transition
 from bhava_library.domain.errors import InvalidStateTransition
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 MIGRATION_001 = """
 PRAGMA foreign_keys = ON;
@@ -299,6 +299,31 @@ CREATE TABLE IF NOT EXISTS curation_events (
 );
 """
 
+MIGRATION_003 = """
+DELETE FROM classification_evidence
+WHERE id NOT IN (
+  SELECT MIN(id)
+  FROM classification_evidence
+  GROUP BY resource_id, dimension, term, classifier, rule_version
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_classification_evidence_rule
+ON classification_evidence(resource_id, dimension, term, classifier, rule_version);
+
+ALTER TABLE program_mappings
+ADD COLUMN mapping_version TEXT NOT NULL DEFAULT 'programs-v1';
+
+DELETE FROM program_mappings
+WHERE id NOT IN (
+  SELECT MIN(id)
+  FROM program_mappings
+  GROUP BY resource_id, program, collection, mapping_version
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_program_mapping_version
+ON program_mappings(resource_id, program, collection, mapping_version);
+"""
+
 
 def utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
@@ -369,6 +394,10 @@ class Database:
             self._record_migration(conn, 1)
             conn.executescript(MIGRATION_002)
             self._record_migration(conn, 2)
+            row = conn.execute("SELECT version FROM schema_migrations WHERE version = 3").fetchone()
+            if row is None:
+                conn.executescript(MIGRATION_003)
+                self._record_migration(conn, 3)
             self.seed_taxonomy(conn)
 
     def integrity_check(self) -> str:

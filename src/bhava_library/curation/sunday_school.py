@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from bhava_library.config import Settings
+from bhava_library.curation.program_config import ProgramDefinition, load_programs
 from bhava_library.infrastructure.database import Database, utc_now
 
 AGE_BANDS: dict[str, tuple[int, int]] = {
@@ -21,12 +22,20 @@ AGE_BANDS: dict[str, tuple[int, int]] = {
 
 FORM_COLLECTIONS: dict[str, str] = {
     "coloring-page": "printables-coloring",
+    "coloring-book": "coloring-books",
+    "activity-book": "activity-books",
     "worksheet": "printables-worksheets",
+    "curriculum": "curricula",
+    "syllabus": "syllabi",
     "lesson-plan": "teacher-lesson-plans",
     "teacher-guide": "teacher-guides",
     "comic": "story-comics",
+    "illustrated-storybook": "storybooks",
     "audio-story": "audio-stories",
     "quiz": "assessments",
+    "presentation": "presentations",
+    "craft": "crafts",
+    "game": "games",
 }
 
 
@@ -34,9 +43,61 @@ def _age_from_audience(audience_term: str) -> tuple[int | None, int | None]:
     return AGE_BANDS.get(audience_term, (None, None))
 
 
+def _program_payload(
+    definition: ProgramDefinition, age_min: int | None, age_max: int | None
+) -> str:
+    return json.dumps(
+        {
+            "configured_age_min": definition.age_min,
+            "configured_age_max": definition.age_max,
+            "duration_minutes": definition.duration_minutes,
+            "purpose": definition.purpose,
+            "teacher_prep": definition.teacher_prep,
+            "assumptions": definition.assumptions,
+            "resource_age_min": age_min,
+            "resource_age_max": age_max,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _age_overlap(age_min: int | None, age_max: int | None, definition: ProgramDefinition) -> bool:
+    if age_min is None or age_max is None:
+        return True
+    return age_min <= definition.age_max and age_max >= definition.age_min
+
+
+def _matching_programs(
+    programs: dict[str, ProgramDefinition],
+    program_terms: list[str],
+    form_terms: list[str],
+    age_min: int | None,
+    age_max: int | None,
+) -> dict[str, tuple[ProgramDefinition, str]]:
+    """Return program key -> (definition, match_reason)."""
+    matched: dict[str, tuple[ProgramDefinition, str]] = {}
+    explicit = set(program_terms)
+    for definition in programs.values():
+        if definition.classification_term in explicit:
+            matched[definition.key] = (definition, "explicit-program-use")
+    if matched:
+        return matched
+    # Suitability fallback for general educational materials.
+    for definition in programs.values():
+        form_hit = any(form in definition.forms for form in form_terms)
+        if not form_hit:
+            continue
+        if not _age_overlap(age_min, age_max, definition):
+            continue
+        matched[definition.key] = (definition, "form-age-suitability")
+    return matched
+
+
 def run_sunday_school(settings: Settings, *, limit: int | None = None) -> dict[str, int]:
     db = Database(settings.catalog_db)
     db.migrate()
+    programs = load_programs(settings.repo_root / "config" / "programs.toml")
     sql = """
         SELECT rc.resource_id, rc.dimension, rc.term
         FROM resource_classifications rc
@@ -72,9 +133,9 @@ def run_sunday_school(settings: Settings, *, limit: int | None = None) -> dict[s
                     age_max = hi if age_max is None else max(age_max, hi)
 
             payload = {
-                "audience_terms": audience_terms,
-                "content_forms": form_terms,
-                "program_terms": program_terms,
+                "audience_terms": sorted(audience_terms),
+                "content_forms": sorted(form_terms),
+                "program_terms": sorted(program_terms),
             }
             conn.execute(
                 """
@@ -86,34 +147,80 @@ def run_sunday_school(settings: Settings, *, limit: int | None = None) -> dict[s
                   age_max = excluded.age_max,
                   payload_json = excluded.payload_json
                 """,
-                (rid, age_min, age_max, None, None, json.dumps(payload)),
+                (
+                    rid,
+                    age_min,
+                    age_max,
+                    None,
+                    None,
+                    json.dumps(payload, sort_keys=True, separators=(",", ":")),
+                ),
             )
             profiles += 1
 
-            collections: set[str] = set()
-            for form in form_terms:
-                coll = FORM_COLLECTIONS.get(form)
-                if coll:
-                    collections.add(coll)
-            if "sunday-school" in program_terms or any(
-                t in {"sunday-school", "bal-gopal"} for t in program_terms
-            ):
-                collections.add("sunday-school-core")
-            if not collections:
-                collections.add("general-reference")
+            desired: dict[tuple[str, str, str], tuple[str, str]] = {}
+            matched = _matching_programs(programs, program_terms, form_terms, age_min, age_max)
+            for definition, match_reason in matched.values():
+                collections = {
+                    FORM_COLLECTIONS[form]
+                    for form in form_terms
+                    if form in definition.forms and form in FORM_COLLECTIONS
+                }
+                if not collections:
+                    collections = {f"{definition.key}-core"}
+                base = json.loads(_program_payload(definition, age_min, age_max))
+                base["match_reason"] = match_reason
+                assumptions = json.dumps(base, sort_keys=True, separators=(",", ":"))
+                for collection in collections:
+                    key = (definition.key, collection, definition.version)
+                    desired[key] = (assumptions, definition.version)
 
-            for coll in sorted(collections):
+            versions = sorted({definition.version for definition in programs.values()})
+            for version in versions:
+                existing = conn.execute(
+                    """
+                    SELECT program, collection, mapping_version
+                    FROM program_mappings
+                    WHERE resource_id = ? AND mapping_version = ?
+                    """,
+                    (rid, version),
+                ).fetchall()
+                for old in existing:
+                    key = (old["program"], old["collection"], old["mapping_version"])
+                    if key not in desired:
+                        conn.execute(
+                            """
+                            DELETE FROM program_mappings
+                            WHERE resource_id = ? AND program = ? AND collection = ?
+                              AND mapping_version = ?
+                            """,
+                            (rid, *key),
+                        )
+            # Drop legacy rows that predate mapping_version.
+            conn.execute(
+                """
+                DELETE FROM program_mappings
+                WHERE resource_id = ? AND (mapping_version IS NULL OR mapping_version = '')
+                """,
+                (rid,),
+            )
+
+            for (program, coll, version), (assumptions, _) in sorted(desired.items()):
                 conn.execute(
                     """
-                    INSERT INTO program_mappings(resource_id, program, collection, assumptions_json, created_at)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO program_mappings(
+                      resource_id, program, collection, assumptions_json, created_at, mapping_version
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(resource_id, program, collection, mapping_version) DO UPDATE SET
+                      assumptions_json = excluded.assumptions_json
                     """,
                     (
                         rid,
-                        "sunday-school",
+                        program,
                         coll,
-                        json.dumps({"age_min": age_min, "age_max": age_max}),
+                        assumptions,
                         utc_now(),
+                        version,
                     ),
                 )
                 mappings += 1

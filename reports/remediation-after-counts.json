@@ -1,0 +1,58 @@
+{
+  "schema": 3,
+  "resources": 2470,
+  "classifications": 20730,
+  "evidence": 20730,
+  "program_mappings": 4173,
+  "names": 2470,
+  "technical": 2444,
+  "candidates": 172,
+  "dossiers": 172,
+  "candidate_statuses": {
+    "candidate_proposal": 151,
+    "proposed": 21
+  },
+  "dossier_statuses": {
+    "dossier_shell": 151,
+    "pending": 21
+  },
+  "review_states": {
+    "auto_accepted": 7547,
+    "needs_review": 13183
+  },
+  "unknown_content_form": 922,
+  "language_english": 0,
+  "language_unknown": 2470,
+  "program_keys": {
+    "bal-gopal": 169,
+    "damodara": 423,
+    "family-bhakti": 533,
+    "gopinath": 730,
+    "gurukula": 270,
+    "homeschool": 823,
+    "sunday-school": 503,
+    "youth": 722
+  },
+  "display_samples": [
+    {
+      "resource_id": "BL-IE-001700A8DF59",
+      "display_filename": "Holy places Q.pdf \u2014 Worksheet \u2014 BL-IE-001700A8DF59.pdf"
+    },
+    {
+      "resource_id": "BL-IE-002140E82414",
+      "display_filename": "MBp30.mp3 \u2014 Audio Story \u2014 BL-IE-002140E82414.mp3"
+    },
+    {
+      "resource_id": "BL-IE-0027C192DB96",
+      "display_filename": "Krsna's Birth Story \u2013 Straight SB.mp3 \u2014 Audio Story \u2014 BL-IE-0027C192DB96.mp3"
+    },
+    {
+      "resource_id": "BL-IE-00455C08E09A",
+      "display_filename": "Vol 3 \u2013 Chapter 04.mp3 \u2014 Audio Story \u2014 BL-IE-00455C08E09A.mp3"
+    },
+    {
+      "resource_id": "BL-IE-007EEBDA55F4",
+      "display_filename": "How Satsvarup Swami came to KC.doc \u2014 Drama Script \u2014 BL-IE-007EEBDA55F4.doc"
+    }
+  ]
+}

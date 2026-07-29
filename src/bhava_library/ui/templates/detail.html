@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ resource.display_title }} — {{ project }}</title>
+  <style>
+    body { font-family: Georgia, serif; margin: 2rem; background: #f7f3ea; color: #1f1a14; }
+    table { width: 100%; border-collapse: collapse; margin: 0.75rem 0 1.5rem; }
+    th, td { text-align: left; padding: 0.35rem; border-bottom: 1px solid #d9d0c0; vertical-align: top; }
+    code, pre { background: #ebe4d6; padding: 0.15rem 0.3rem; }
+    pre { white-space: pre-wrap; padding: 0.75rem; }
+    a { color: #5a3418; }
+  </style>
+</head>
+<body>
+  <p><a href="/">← Search</a></p>
+  <h1>{{ resource.display_title }}</h1>
+  <p>{{ bind_note }}</p>
+  <table>
+    <tr><th>Resource ID</th><td><code>{{ resource.resource_id }}</code></td></tr>
+    <tr><th>Original title</th><td>{{ resource.title_original }}</td></tr>
+    <tr><th>Display filename</th><td>{{ resource.display_filename or "" }}</td></tr>
+    <tr><th>Status</th><td>{{ resource.status }}</td></tr>
+    <tr><th>Media</th><td>{{ resource.media_type }} / {{ resource.media_format }}</td></tr>
+    <tr><th>Language</th><td>{{ resource.language or "" }}</td></tr>
+    <tr><th>Source label</th><td>{{ resource.source_label or "" }}</td></tr>
+    <tr><th>Relative path</th><td><code>{{ resource.relative_path or "(hidden or absent)" }}</code></td></tr>
+    <tr><th>SHA-256</th><td><code>{{ resource.sha256 or "" }}</code></td></tr>
+    <tr><th>Quarantine</th><td>{{ resource.quarantine_reason or "none" }}</td></tr>
+    <tr><th>Duplicate of</th><td>{{ resource.duplicate_of_file_id or "none" }}</td></tr>
+    <tr><th>Original URL</th><td>{{ resource.original_url or "" }}</td></tr>
+  </table>
+
+  <h2>Technical metadata</h2>
+  <pre>{{ resource.technical_json or "{}" }}</pre>
+
+  <h2>Classifications</h2>
+  <table>
+    <thead><tr><th>Dimension</th><th>Term</th><th>Confidence</th><th>Source</th><th>Review</th></tr></thead>
+    <tbody>
+    {% for row in classifications %}
+      <tr>
+        <td>{{ row.dimension }}</td>
+        <td>{{ row.term }}</td>
+        <td>{{ "%.2f"|format(row.confidence or 0) }}</td>
+        <td>{{ row.source }}</td>
+        <td>{{ row.review_state }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Evidence</h2>
+  <table>
+    <thead><tr><th>Dimension</th><th>Term</th><th>Classifier</th><th>Excerpt</th><th>Confidence</th></tr></thead>
+    <tbody>
+    {% for row in evidence %}
+      <tr>
+        <td>{{ row.dimension }}</td>
+        <td>{{ row.term }}</td>
+        <td>{{ row.classifier }}</td>
+        <td>{{ row.excerpt }}</td>
+        <td>{{ "%.2f"|format(row.confidence or 0) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Candidate / dossier status</h2>
+  <table>
+    <thead><tr><th>Candidate</th><th>Type</th><th>Status</th><th>Dossier</th><th>Independent creation</th></tr></thead>
+    <tbody>
+    {% for row in candidates %}
+      <tr>
+        <td><code>{{ row.candidate_id }}</code></td>
+        <td>{{ row.product_type }}</td>
+        <td>{{ row.status }}</td>
+        <td>{{ row.dossier_state or "" }}</td>
+        <td>{{ row.similarity_status or "" }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5">No candidate proposals for this resource.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

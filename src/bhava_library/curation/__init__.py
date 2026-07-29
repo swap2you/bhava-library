@@ -2,6 +2,7 @@
 
 from bhava_library.curation.ai_enrich import run_ai_enrich
 from bhava_library.curation.archive_pack import (
+    ArchivePackError,
     PublicGitHubUploadRefused,
     refuse_public_github_upload,
     run_archive_pack,
@@ -19,6 +20,7 @@ from bhava_library.curation.taxonomy_seed import RULE_VERSION, TAXONOMY, term_id
 from bhava_library.curation.views import run_build_views
 
 __all__ = [
+    "ArchivePackError",
     "PublicGitHubUploadRefused",
     "RULE_VERSION",
     "TAXONOMY",

@@ -6,7 +6,7 @@ from bhava_library.curation.taxonomy_seed import RULE_VERSION, TAXONOMY, term_id
 
 
 def test_rule_version_present() -> None:
-    assert RULE_VERSION == "rules-v1.0"
+    assert RULE_VERSION == "rules-v2.0"
 
 
 def test_term_id_format() -> None:
@@ -19,6 +19,7 @@ def test_required_dimensions_exist() -> None:
         "audience",
         "program-use",
         "topic",
+        "person",
         "festival",
         "scripture",
         "language",

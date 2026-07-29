@@ -5,10 +5,12 @@
   <title>{{ project }} — Local Search</title>
   <style>
     body { font-family: Georgia, serif; margin: 2rem; background: #f7f3ea; color: #1f1a14; }
-    input { width: 70%; padding: 0.5rem; }
+    input, select { padding: 0.4rem; margin: 0.2rem 0.4rem 0.2rem 0; }
     table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-    th, td { text-align: left; padding: 0.4rem; border-bottom: 1px solid #d9d0c0; }
-    .stats { background: #ebe4d6; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; }
+    th, td { text-align: left; padding: 0.4rem; border-bottom: 1px solid #d9d0c0; vertical-align: top; }
+    .stats, .filters { background: #ebe4d6; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; }
+    .filters label { display: inline-block; margin-right: 0.75rem; font-size: 0.95rem; }
+    a { color: #5a3418; }
   </style>
 </head>
 <body>
@@ -18,22 +20,119 @@
     Resources: {{ counts.resources }} |
     Local files: {{ counts.local_files }} |
     Classifications: {{ counts.classifications }} |
-    Display names: {{ counts.display_names }}
+    Display names: {{ counts.display_names }} |
+    Quarantined: {{ counts.quarantined }} |
+    Duplicates: {{ counts.duplicates }}
   </div>
-  <form method="get">
-    <input name="q" value="{{ q }}" placeholder="Search display title, slug…">
-    <button type="submit">Search</button>
+  <form method="get" class="filters">
+    <label>Search <input name="q" value="{{ q }}" placeholder="Title or slug"></label>
+    <label>Form
+      <select name="content_form">
+        <option value="">Any</option>
+        {% for opt in options.content_form %}
+        <option value="{{ opt }}" {% if filters.content_form == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Audience
+      <select name="audience">
+        <option value="">Any</option>
+        {% for opt in options.audience %}
+        <option value="{{ opt }}" {% if filters.audience == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Age
+      <input name="age" type="number" min="0" max="120"
+             value="{{ filters.age if filters.age is not none else '' }}">
+    </label>
+    <label>Program
+      <select name="program">
+        <option value="">Any</option>
+        {% for opt in options.program %}
+        <option value="{{ opt }}" {% if filters.program == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Topic
+      <select name="topic">
+        <option value="">Any</option>
+        {% for opt in options.topic %}
+        <option value="{{ opt }}" {% if filters.topic == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Festival
+      <select name="festival">
+        <option value="">Any</option>
+        {% for opt in options.festival %}
+        <option value="{{ opt }}" {% if filters.festival == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Language
+      <select name="language">
+        <option value="">Any</option>
+        {% for opt in options.language %}
+        <option value="{{ opt }}" {% if filters.language == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Opportunity
+      <select name="production_opportunity">
+        <option value="">Any</option>
+        {% for opt in options.production_opportunity %}
+        <option value="{{ opt }}" {% if filters.production_opportunity == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Review
+      <select name="review_state">
+        <option value="">Any</option>
+        {% for opt in options.review_state %}
+        <option value="{{ opt }}" {% if filters.review_state == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Quarantine
+      <select name="quarantine">
+        <option value="">Any</option>
+        <option value="yes" {% if filters.quarantine == "yes" %}selected{% endif %}>Yes</option>
+        <option value="no" {% if filters.quarantine == "no" %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <label>Duplicates
+      <select name="duplicates">
+        <option value="">Any</option>
+        <option value="yes" {% if filters.duplicates == "yes" %}selected{% endif %}>Yes</option>
+        <option value="no" {% if filters.duplicates == "no" %}selected{% endif %}>No</option>
+      </select>
+    </label>
+    <button type="submit">Apply</button>
   </form>
   <table>
-    <thead><tr><th>Title</th><th>Type</th><th>Format</th><th>Theme</th><th>Status</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Form</th>
+        <th>Type</th>
+        <th>Review</th>
+        <th>Status</th>
+        <th>Flags</th>
+      </tr>
+    </thead>
     <tbody>
     {% for row in rows %}
       <tr>
-        <td>{{ row["display_title"] }}</td>
+        <td><a href="/resource/{{ row['resource_id'] }}">{{ row["display_title"] }}</a></td>
+        <td>{{ row["content_forms"] or "" }}</td>
         <td>{{ row["media_type"] }}</td>
-        <td>{{ row["media_format"] }}</td>
-        <td>{{ row["theme"] }}</td>
+        <td>{{ row["review_state"] or "" }}</td>
         <td>{{ row["status"] }}</td>
+        <td>
+          {% if row["quarantine_reason"] %}quarantine{% endif %}
+          {% if row["duplicate_of_file_id"] %}duplicate{% endif %}
+        </td>
       </tr>
     {% endfor %}
     </tbody>

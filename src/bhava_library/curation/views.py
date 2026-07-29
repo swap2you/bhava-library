@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import html
 import json
 from pathlib import Path
 
@@ -73,16 +74,20 @@ def _write_md(path: Path, title: str, rows: list[dict[str, object]]) -> None:
 
 
 def _write_html(path: Path, title: str, rows: list[dict[str, object]]) -> None:
+    safe_title = html.escape(title, quote=True)
     body = [
         "<!DOCTYPE html><html><head><meta charset='utf-8'>",
-        f"<title>{title}</title></head><body>",
-        f"<h1>{title}</h1><p>{len(rows)} records (paths as text only).</p><ul>",
+        f"<title>{safe_title}</title></head><body>",
+        f"<h1>{safe_title}</h1><p>{len(rows)} records (paths as text only).</p><ul>",
     ]
     for row in rows[:500]:
+        display_title = html.escape(str(row.get("display_title") or ""), quote=True)
+        resource_id = html.escape(str(row.get("resource_id") or ""), quote=True)
+        relative_path = html.escape(str(row.get("relative_path") or ""), quote=True)
         body.append(
-            f"<li><strong>{row.get('display_title')}</strong> "
-            f"<code>{row.get('resource_id')}</code> "
-            f"<span>{row.get('relative_path') or ''}</span></li>"
+            f"<li><strong>{display_title}</strong> "
+            f"<code>{resource_id}</code> "
+            f"<span>{relative_path}</span></li>"
         )
     body.append("</ul></body></html>")
     path.parent.mkdir(parents=True, exist_ok=True)

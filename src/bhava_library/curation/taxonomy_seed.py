@@ -133,6 +133,14 @@ TAXONOMY: dict[str, list[str]] = {
         "comparative-religion",
         "teacher-development",
     ],
+    "person": [
+        "krishna",
+        "balarama",
+        "radha",
+        "caitanya-mahaprabhu",
+        "nityananda",
+        "srila-prabhupada",
+    ],
     "festival": [
         "janmastami",
         "radhastami",
@@ -203,7 +211,7 @@ TAXONOMY: dict[str, list[str]] = {
     ],
 }
 
-RULE_VERSION = "rules-v1.0"
+RULE_VERSION = "rules-v2.0"
 
 
 def term_id(dimension: str, value: str) -> str:

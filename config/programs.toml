@@ -1,0 +1,95 @@
+[[programs]]
+key = "sunday-school"
+classification_term = "sunday-school"
+age_min = 5
+age_max = 12
+purpose = "Weekly temple-based devotional learning"
+forms = ["curriculum", "lesson-plan", "worksheet", "activity-book", "illustrated-storybook", "game", "craft"]
+duration_minutes = 75
+teacher_prep = "Review lesson objectives and prepare classroom materials"
+assumptions = ["weekly class", "mixed experience"]
+version = "programs-v1"
+
+[[programs]]
+key = "bal-gopal"
+classification_term = "bal-gopal"
+age_min = 3
+age_max = 7
+purpose = "Early-years devotional formation through story and play"
+forms = ["coloring-page", "coloring-book", "illustrated-storybook", "flashcard", "song-lyrics", "game"]
+duration_minutes = 45
+teacher_prep = "Prepare short sensory and movement activities"
+assumptions = ["adult assistance", "pre-reader friendly"]
+version = "programs-v1"
+
+[[programs]]
+key = "damodara"
+classification_term = "damodara-class"
+age_min = 6
+age_max = 9
+purpose = "Foundational scripture, practice, and character learning"
+forms = ["curriculum", "activity-book", "worksheet", "craft", "prayer", "song-lyrics"]
+duration_minutes = 60
+teacher_prep = "Review vocabulary and prepare guided activity"
+assumptions = ["beginning reader", "group instruction"]
+version = "programs-v1"
+
+[[programs]]
+key = "gopinath"
+classification_term = "gopinath-class"
+age_min = 9
+age_max = 13
+purpose = "Develop scriptural understanding and personal application"
+forms = ["curriculum", "syllabus", "student-workbook", "presentation", "drama-script", "quiz"]
+duration_minutes = 75
+teacher_prep = "Prepare discussion prompts and scripture references"
+assumptions = ["independent reading", "discussion ready"]
+version = "programs-v1"
+
+[[programs]]
+key = "gurukula"
+classification_term = "gurukula"
+age_min = 5
+age_max = 14
+purpose = "Integrated daily devotional and academic education"
+forms = ["curriculum", "syllabus", "teacher-guide", "student-workbook", "assessment", "presentation"]
+duration_minutes = 90
+teacher_prep = "Sequence material within the school curriculum"
+assumptions = ["regular attendance", "trained teacher"]
+version = "programs-v1"
+
+[[programs]]
+key = "homeschool"
+classification_term = "homeschool"
+age_min = 5
+age_max = 16
+purpose = "Flexible home-based devotional education"
+forms = ["curriculum", "teacher-guide", "student-workbook", "worksheet", "audio-story", "presentation"]
+duration_minutes = 60
+teacher_prep = "Select level and adapt pacing to the learner"
+assumptions = ["caregiver facilitation", "flexible schedule"]
+version = "programs-v1"
+
+[[programs]]
+key = "family-bhakti"
+classification_term = "family-bhakti"
+age_min = 3
+age_max = 99
+purpose = "Shared household devotional practice and conversation"
+forms = ["illustrated-storybook", "prayer", "song-lyrics", "kirtan", "craft", "game", "audio-story"]
+duration_minutes = 30
+teacher_prep = "Choose one shared practice and an age-flexible prompt"
+assumptions = ["mixed ages", "family participation"]
+version = "programs-v1"
+
+[[programs]]
+key = "youth"
+classification_term = "youth-program"
+age_min = 13
+age_max = 18
+purpose = "Youth inquiry, service, identity, and peer learning"
+forms = ["curriculum", "presentation", "drama-script", "game", "lecture-audio", "article"]
+duration_minutes = 90
+teacher_prep = "Prepare facilitated discussion and practical application"
+assumptions = ["peer discussion", "age-appropriate safeguarding"]
+version = "programs-v1"
