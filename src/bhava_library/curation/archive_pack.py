@@ -52,8 +52,6 @@ def refuse_public_github_upload(
             "Refusing archive upload to a public GitHub repository. "
             "Use private release assets with explicit owner approval."
         )
-    if vis == "public":
-        raise PublicGitHubUploadRefused("BHAVA_GITHUB_VISIBILITY=public is not allowed.")
 
 
 def _should_include(path: Path, data_dir: Path, repo_root: Path) -> bool:

@@ -45,6 +45,16 @@ def test_refuse_public_github_upload(monkeypatch) -> None:
     monkeypatch.setenv("BHAVA_GITHUB_VISIBILITY", "public")
     with pytest.raises(PublicGitHubUploadRefused):
         refuse_public_github_upload()
+    monkeypatch.delenv("BHAVA_GITHUB_VISIBILITY")
+    with pytest.raises(PublicGitHubUploadRefused):
+        refuse_public_github_upload(
+            repo_visibility="private",
+            upload_target="https://github.com/example/public/releases",
+        )
+    refuse_public_github_upload(
+        repo_visibility="private",
+        upload_target="https://github.com/example/private/releases",
+    )
 
 
 def test_archive_pack_and_restore_preserves_source_hashes(tmp_path: Path) -> None:

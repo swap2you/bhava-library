@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from bhava_library.config import Settings
+from bhava_library.infrastructure.catalog_queries import PREFERRED_LOCAL_FILE_JOIN
 from bhava_library.infrastructure.database import Database, utc_now
 
 CANDIDATE_TYPES = (
@@ -123,19 +124,20 @@ def _candidate_id(resource_id: str, product_type: str) -> str:
 def run_candidates(settings: Settings, *, limit: int | None = None) -> dict[str, int]:
     db = Database(settings.catalog_db)
     db.migrate()
-    sql = """
+    candidate_markers = ",".join("?" * len(CANDIDATE_TYPES))
+    sql = f"""
         SELECT rc.resource_id, rc.term AS product_type, rc.confidence,
                rc.review_state AS automatic_review_state,
                r.title_original, rn.display_title, lf.relative_path
         FROM resource_classifications rc
         JOIN resources r ON r.resource_id = rc.resource_id
         LEFT JOIN resource_names rn ON rn.resource_id = r.resource_id
-        LEFT JOIN local_files lf ON lf.resource_id = r.resource_id
+        {PREFERRED_LOCAL_FILE_JOIN}
         WHERE rc.dimension = 'production-opportunity'
-          AND rc.term IN ({})
+          AND rc.term IN ({candidate_markers})
           AND r.removed_at IS NULL
         ORDER BY rc.confidence DESC
-    """.format(",".join("?" * len(CANDIDATE_TYPES)))  # nosec B608 — bind markers only
+    """  # nosec B608 — fixed join and bind markers only
     params: tuple[object, ...] = CANDIDATE_TYPES
     if limit is not None:
         sql += " LIMIT ?"

@@ -103,9 +103,32 @@ def test_rerun_remediates_legacy_shells_and_preserves_reviews(tmp_path: Path) ->
             )
             """
         )
+        conn.execute(
+            """
+            INSERT INTO local_files(
+              file_id, resource_id, relative_path, size_bytes, sha256, verified_at, read_only
+            ) VALUES (
+              'f1-primary', 'BL-PROV-001', 'data/originals/reference.pdf',
+              10, 'primary', datetime('now'), 1
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO local_files(
+              file_id, resource_id, relative_path, size_bytes, sha256, verified_at,
+              read_only, duplicate_of_file_id, quarantine_reason
+            ) VALUES (
+              'f0-quarantine', 'BL-PROV-001', 'data/quarantine/reference.pdf',
+              10, 'quarantine', datetime('now'), 1, 'f1-primary', 'signature review'
+            )
+            """
+        )
 
     run_candidates(settings)
     first_candidate = db.execute("SELECT * FROM production_candidates")[0]
+    first_payload = json.loads(first_candidate["payload_json"])
+    assert first_payload["relative_path"] == "data/originals/reference.pdf"
     with db.session() as conn:
         conn.execute(
             "UPDATE production_candidates SET status = 'proposed' WHERE candidate_id = ?",

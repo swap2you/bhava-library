@@ -8,7 +8,7 @@ import pytest
 
 from bhava_library.config import load_settings
 from bhava_library.infrastructure.database import Database
-from bhava_library.ui.app import create_app, is_allowed_original_path
+from bhava_library.ui.app import _search_rows, create_app, is_allowed_original_path
 
 
 @pytest.fixture
@@ -49,6 +49,31 @@ def settings(tmp_path: Path):
         )
         conn.execute(
             """
+            INSERT INTO local_files(
+              file_id, resource_id, relative_path, size_bytes, sha256, verified_at,
+              read_only, duplicate_of_file_id, quarantine_reason
+            ) VALUES (
+              'f0-quarantine', 'BL-UI-001',
+              'data/quarantine/iskcon-education/documents/a.pdf',
+              10, 'quarantined', datetime('now'), 1, 'f1', 'signature review'
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO resources(
+              resource_id, source_id, source_row_key, title_original, title_normalized,
+              media_type, media_format, original_url, profile, priority, status,
+              first_seen_at, last_seen_at
+            ) VALUES (
+              'BL-UI-002', 'iskcon-education', 'k2', 'All Accepted Story',
+              'all accepted story', 'Audio', 'MP3', 'https://example.org/b.mp3',
+              'core', 10, 'verified', datetime('now'), datetime('now')
+            )
+            """
+        )
+        conn.execute(
+            """
             INSERT INTO resource_names(
               resource_id, display_title, display_filename, slug,
               ascii_aliases_json, alternate_titles_json, export_filename, updated_at
@@ -67,6 +92,8 @@ def settings(tmp_path: Path):
               ('BL-UI-001', 'content-form', 'worksheet', 0.9, 'rule', 'rules-v2.0',
                'needs_review', datetime('now')),
               ('BL-UI-001', 'topic', 'krishna', 0.88, 'rule', 'rules-v2.0',
+               'auto_accepted', datetime('now')),
+              ('BL-UI-002', 'content-form', 'audio-story', 0.9, 'rule', 'rules-v2.0',
                'auto_accepted', datetime('now'))
             """
         )
@@ -86,6 +113,24 @@ def settings(tmp_path: Path):
             """
         )
     return s
+
+
+def _rows_for(settings, review_state: str = "") -> list[dict[str, object]]:
+    return _search_rows(
+        Database(settings.catalog_db),
+        q="",
+        content_form="",
+        audience="",
+        age=None,
+        program="",
+        topic="",
+        festival="",
+        language="",
+        production_opportunity="",
+        review_state=review_state,
+        quarantine="",
+        duplicates="",
+    )
 
 
 def test_is_allowed_original_path(settings) -> None:
@@ -130,3 +175,17 @@ def test_faceted_search_and_detail_page(settings) -> None:
     assert "Classification" in detail.text or "Classifications" in detail.text
     assert "krishna" in detail.text
     assert "Evidence" in detail.text
+    assert "data/originals/iskcon-education/documents/a.pdf" in detail.text
+    assert "data/quarantine/iskcon-education/documents/a.pdf" not in detail.text
+
+
+def test_review_state_precedence_and_filtering(settings) -> None:
+    rows = {row["resource_id"]: row for row in _rows_for(settings)}
+    assert rows["BL-UI-001"]["review_state"] == "needs_review"
+    assert rows["BL-UI-002"]["review_state"] == "auto_accepted"
+    assert rows["BL-UI-001"]["relative_path"] == ("data/originals/iskcon-education/documents/a.pdf")
+
+    needs_review = _rows_for(settings, "needs_review")
+    assert [row["resource_id"] for row in needs_review] == ["BL-UI-001"]
+    auto_accepted = _rows_for(settings, "auto_accepted")
+    assert [row["resource_id"] for row in auto_accepted] == ["BL-UI-002"]

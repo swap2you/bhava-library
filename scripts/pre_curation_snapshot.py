@@ -6,6 +6,7 @@ import hashlib
 import json
 import shutil
 import sqlite3
+import subprocess  # nosec B404 — fixed git executable only, never shell execution
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -25,8 +26,50 @@ def _norm(p: str) -> str:
     return p.replace("\\", "/").lstrip("./")
 
 
+def _git_output(repo_root: Path, *arguments: str) -> tuple[str | None, str | None]:
+    command = ["git", *arguments]
+    try:
+        completed = subprocess.run(  # nosec B603
+            command,
+            cwd=repo_root,
+            check=False,
+            capture_output=True,
+            text=True,
+            shell=False,
+        )
+    except OSError as exc:
+        return None, f"{' '.join(command)} unavailable: {exc}"
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"exit code {completed.returncode}"
+        return None, f"{' '.join(command)} failed: {detail}"
+    return completed.stdout.strip(), None
+
+
+def _git_provenance(repo_root: Path) -> dict[str, object]:
+    warnings: list[str] = []
+    commit, warning = _git_output(repo_root, "rev-parse", "HEAD")
+    if warning:
+        warnings.append(warning)
+    branch, warning = _git_output(repo_root, "branch", "--show-current")
+    if warning:
+        warnings.append(warning)
+    elif not branch:
+        warnings.append("git branch --show-current returned no branch (detached HEAD)")
+    status, warning = _git_output(repo_root, "status", "--porcelain")
+    if warning:
+        warnings.append(warning)
+    return {
+        "repo_commit": commit or "unknown",
+        "branch": branch or "unknown",
+        "dirty_working_tree": status != "" if status is not None else "unknown",
+        "repository_root": str(repo_root.resolve()),
+        "git_warnings": warnings,
+    }
+
+
 def create_pre_curation_snapshot(repo_root: Path) -> Path:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    provenance = _git_provenance(repo_root)
     snap_dir = repo_root / "data" / "snapshots" / f"pre-curation-{stamp}"
     snap_dir.mkdir(parents=True, exist_ok=True)
 
@@ -129,8 +172,7 @@ def create_pre_curation_snapshot(repo_root: Path) -> Path:
     manifest = {
         "snapshot_id": f"pre-curation-{stamp}",
         "created_at": stamp,
-        "repo_commit": "17ac6d1ad7fddb3dfe8e47645e43d86476652614",
-        "branch": "feature/library-curation-v1",
+        **provenance,
         "catalog_file_count": len(catalog_rows),
         "disk_file_count": len(fs_entries),
         "disk_total_bytes": total_bytes,
@@ -153,6 +195,11 @@ def create_pre_curation_snapshot(repo_root: Path) -> Path:
     summary = {
         "snapshot_id": manifest["snapshot_id"],
         "created_at": stamp,
+        "repo_commit": provenance["repo_commit"],
+        "branch": provenance["branch"],
+        "dirty_working_tree": provenance["dirty_working_tree"],
+        "repository_root": provenance["repository_root"],
+        "git_warnings": provenance["git_warnings"],
         "catalog_file_count": len(catalog_rows),
         "disk_file_count": len(fs_entries),
         "disk_total_bytes": total_bytes,
@@ -175,8 +222,12 @@ def create_pre_curation_snapshot(repo_root: Path) -> Path:
         f"""# Pre-curation snapshot
 
 - Snapshot ID: `{summary["snapshot_id"]}`
-- Branch: `feature/library-curation-v1`
-- Baseline commit: `17ac6d1ad7fddb3dfe8e47645e43d86476652614`
+- Timestamp: `{summary["created_at"]}`
+- Repository root: `{summary["repository_root"]}`
+- Branch: `{summary["branch"]}`
+- Baseline commit: `{summary["repo_commit"]}`
+- Dirty working tree: **{summary["dirty_working_tree"]}**
+- Git warnings: `{summary["git_warnings"] or "none"}`
 - Catalog files: **{summary["catalog_file_count"]}**
 - Disk files (originals+quarantine): **{summary["disk_file_count"]}**
 - Disk bytes: **{summary["disk_total_bytes"]}** ({summary["disk_total_gib"]} GiB)

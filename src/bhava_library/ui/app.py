@@ -10,6 +10,10 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from bhava_library.config import Settings
+from bhava_library.infrastructure.catalog_queries import (
+    PREFERRED_LOCAL_FILE_JOIN,
+    RESOURCE_REVIEW_STATE_SQL,
+)
 from bhava_library.infrastructure.database import Database
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -147,12 +151,7 @@ def _search_rows(
         params.extend([program, program, program])
 
     if review_state:
-        clauses.append(
-            "EXISTS ("
-            "SELECT 1 FROM resource_classifications rc "
-            "WHERE rc.resource_id = r.resource_id AND rc.review_state = ?"
-            ")"
-        )
+        clauses.append(f"({RESOURCE_REVIEW_STATE_SQL}) = ?")
         params.append(review_state)
 
     if quarantine == "yes":
@@ -184,30 +183,16 @@ def _search_rows(
                COALESCE(rn.display_title, r.title_original) AS display_title,
                r.title_original, r.media_type, r.media_format,
                r.theme, r.source_label, r.status,
-               (SELECT lf.relative_path FROM local_files lf
-                WHERE lf.resource_id = r.resource_id ORDER BY lf.file_id LIMIT 1)
-                AS relative_path,
-               (SELECT qf.quarantine_reason FROM local_files qf
-                WHERE qf.resource_id = r.resource_id
-                  AND (qf.quarantine_reason IS NOT NULL
-                       OR qf.relative_path LIKE 'data/quarantine/%')
-                ORDER BY qf.file_id LIMIT 1) AS quarantine_reason,
-               (SELECT df.duplicate_of_file_id FROM local_files df
-                WHERE df.resource_id = r.resource_id
-                  AND df.duplicate_of_file_id IS NOT NULL
-                ORDER BY df.file_id LIMIT 1) AS duplicate_of_file_id,
+               lf.relative_path, lf.quarantine_reason, lf.duplicate_of_file_id,
                (
                  SELECT GROUP_CONCAT(rc.term, ', ')
                  FROM resource_classifications rc
                  WHERE rc.resource_id = r.resource_id AND rc.dimension = 'content-form'
                ) AS content_forms,
-               (
-                 SELECT MIN(rc.review_state)
-                 FROM resource_classifications rc
-                 WHERE rc.resource_id = r.resource_id
-               ) AS review_state
+               ({RESOURCE_REVIEW_STATE_SQL}) AS review_state
         FROM resources r
         LEFT JOIN resource_names rn ON rn.resource_id = r.resource_id
+        {PREFERRED_LOCAL_FILE_JOIN}
         WHERE {" AND ".join(clauses)}
         ORDER BY COALESCE(rn.display_title, r.title_original)
         LIMIT 100
@@ -313,7 +298,7 @@ def create_app(settings: Settings) -> FastAPI:
     @app.get("/resource/{resource_id}", response_class=HTMLResponse)
     def resource_detail(request: Request, resource_id: str) -> HTMLResponse:
         rows = db.execute(
-            """
+            f"""
             SELECT r.resource_id,
                    COALESCE(rn.display_title, r.title_original) AS display_title,
                    rn.display_filename, rn.slug, rn.ascii_aliases_json,
@@ -323,10 +308,10 @@ def create_app(settings: Settings) -> FastAPI:
                    lf.duplicate_of_file_id, tm.payload_json AS technical_json
             FROM resources r
             LEFT JOIN resource_names rn ON rn.resource_id = r.resource_id
-            LEFT JOIN local_files lf ON lf.resource_id = r.resource_id
+            {PREFERRED_LOCAL_FILE_JOIN}
             LEFT JOIN technical_metadata tm ON tm.resource_id = r.resource_id
             WHERE r.resource_id = ?
-            """,
+            """,  # nosec B608 — fixed reusable SQL fragment
             (resource_id,),
         )
         if not rows:

@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import html
 import json
+import re
+import unicodedata
 from pathlib import Path
 
 from bhava_library.config import Settings
+from bhava_library.infrastructure.catalog_queries import PREFERRED_LOCAL_FILE_JOIN
 from bhava_library.infrastructure.database import Database
 
 VIEW_DIMENSIONS = (
@@ -19,6 +23,17 @@ VIEW_DIMENSIONS = (
     "language",
     "production-opportunity",
 )
+_UNSAFE_VIEW_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+_DRIVE_PREFIX = re.compile(r"^[A-Za-z]:")
+_MULTI_SEPARATOR = re.compile(r"[\s._-]+")
+_WINDOWS_RESERVED = {
+    "con",
+    "prn",
+    "aux",
+    "nul",
+    *(f"com{number}" for number in range(1, 10)),
+    *(f"lpt{number}" for number in range(1, 10)),
+}
 
 
 def _resource_record(row) -> dict[str, object]:
@@ -34,16 +49,59 @@ def _resource_record(row) -> dict[str, object]:
 
 def _fetch_resources(db: Database) -> list:
     return db.execute(
-        """
+        f"""
         SELECT r.resource_id, r.title_original, r.media_type, r.status,
                rn.display_title, lf.relative_path
         FROM resources r
         LEFT JOIN resource_names rn ON rn.resource_id = r.resource_id
-        LEFT JOIN local_files lf ON lf.resource_id = r.resource_id
+        {PREFERRED_LOCAL_FILE_JOIN}
         WHERE r.removed_at IS NULL
         ORDER BY r.resource_id
-        """
+        """  # nosec B608 — fixed reusable SQL fragment
     )
+
+
+def safe_view_slug(value: str) -> str:
+    """Return one Unicode-preserving, Windows-safe path component."""
+    normalized = unicodedata.normalize("NFKC", value).strip()
+    normalized = _DRIVE_PREFIX.sub("", normalized)
+    normalized = _UNSAFE_VIEW_CHARS.sub("-", normalized)
+    parts = [part for part in normalized.split(".") if part not in {"", ".", ".."}]
+    normalized = "-".join(parts)
+    normalized = _MULTI_SEPARATOR.sub("-", normalized).strip(" .-")
+    if not normalized:
+        normalized = "term"
+    if normalized.casefold() in _WINDOWS_RESERVED:
+        normalized = f"term-{normalized}"
+    return normalized[:120].rstrip(" .-") or "term"
+
+
+def build_safe_view_slugs(terms: list[str]) -> tuple[dict[str, str], int]:
+    """Build stable slugs and suffix every member of a collision group."""
+    bases = {term: safe_view_slug(term) for term in sorted(set(terms))}
+    grouped: dict[str, list[str]] = {}
+    for term, base in bases.items():
+        grouped.setdefault(base.casefold(), []).append(term)
+    slugs: dict[str, str] = {}
+    collisions = 0
+    for collision_terms in grouped.values():
+        if len(collision_terms) == 1:
+            term = collision_terms[0]
+            slugs[term] = bases[term]
+            continue
+        collisions += 1
+        for term in collision_terms:
+            digest = hashlib.sha256(term.encode("utf-8")).hexdigest()[:8]
+            slugs[term] = f"{bases[term]}--{digest}"
+    return slugs, collisions
+
+
+def _safe_term_output(views_root: Path, dimension: str, slug: str) -> Path:
+    output = (views_root / f"by-{safe_view_slug(dimension)}" / slug).resolve()
+    root = views_root.resolve()
+    if not output.is_relative_to(root):
+        raise ValueError(f"View output escaped views root: {output}")
+    return output
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -115,19 +173,20 @@ def run_build_views(settings: Settings) -> dict[str, int]:
     _write_md(all_view / "catalog.md", "All catalog resources", base_records)
     _write_html(all_view / "catalog.html", "All catalog resources", base_records)
     written = 4
+    slug_collisions = 0
 
     for dimension in VIEW_DIMENSIONS:
         rows = db.execute(
-            """
-            SELECT rc.term, r.resource_id, r.title_original, r.media_type, r.status,
+            f"""
+            SELECT DISTINCT rc.term, r.resource_id, r.title_original, r.media_type, r.status,
                    rn.display_title, lf.relative_path
             FROM resource_classifications rc
             JOIN resources r ON r.resource_id = rc.resource_id
             LEFT JOIN resource_names rn ON rn.resource_id = r.resource_id
-            LEFT JOIN local_files lf ON lf.resource_id = r.resource_id
+            {PREFERRED_LOCAL_FILE_JOIN}
             WHERE rc.dimension = ? AND r.removed_at IS NULL
             ORDER BY rc.term, r.resource_id
-            """,
+            """,  # nosec B608 — fixed reusable SQL fragment
             (dimension,),
         )
         by_term: dict[str, list[dict[str, object]]] = {}
@@ -136,13 +195,18 @@ def run_build_views(settings: Settings) -> dict[str, int]:
             rec["term"] = row["term"]
             by_term.setdefault(row["term"], []).append(rec)
 
-        dim_slug = dimension.replace("_", "-")
+        term_slugs, collisions = build_safe_view_slugs(list(by_term))
+        slug_collisions += collisions
         for term, term_rows in by_term.items():
-            out = views_root / f"by-{dim_slug}" / term
+            out = _safe_term_output(views_root, dimension, term_slugs[term])
             _write_json(out / "index.json", term_rows)
             _write_csv(out / "index.csv", term_rows, [*fields, "term"])
             _write_md(out / "index.md", f"{dimension}: {term}", term_rows)
             _write_html(out / "index.html", f"{dimension}: {term}", term_rows)
             written += 4
 
-    return {"resources": len(resources), "artifacts": written}
+    return {
+        "resources": len(resources),
+        "artifacts": written,
+        "slug_collisions": slug_collisions,
+    }
