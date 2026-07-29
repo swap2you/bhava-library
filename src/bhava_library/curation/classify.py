@@ -74,6 +74,15 @@ SPECIFIC_CONTENT_FORM_RULES: list[tuple[str, str, float]] = [
 ]
 
 BROAD_CONTENT_FORM_RULES: list[tuple[str, str, float]] = [
+    ("coloring-book", r"\bcolou?r(?:ing)?[\s_-]*books?\b", 0.9),
+    ("coloring-page", r"\bcolou?r(?:ing)?[\s_-]*(?:pages?|sheets?)\b", 0.88),
+    ("activity-book", r"\bactivity[\s_-]*books?\b", 0.88),
+    ("illustrated-storybook", r"\b(?:illustrated[\s_-]+)?story[\s_-]*books?\b", 0.86),
+    ("worksheet", r"\bworksheets?\b|\bactivity[\s_-]*sheets?\b", 0.86),
+    ("student-workbook", r"\bstudent[\s_-]*books?\b|\bworkbooks?\b", 0.84),
+    ("game", r"\bgames?\b", 0.82),
+    ("kirtan", r"\bkirtans?\b", 0.86),
+    ("bhajan", r"\bbhajans?\b", 0.86),
     ("curriculum", r"\bcurricul(?:um|a)\b|course\s+of\s+study", 0.88),
     ("syllabus", r"\bsyllab(?:us|i)\b", 0.88),
     ("teacher-guide", r"\bteacher\s+materials?\b|\bteacher\s+resources?\b", 0.82),

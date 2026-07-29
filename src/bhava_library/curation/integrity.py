@@ -9,6 +9,7 @@ from pathlib import Path
 from bhava_library.config import Settings
 from bhava_library.curation.audit import audited_curation_command
 from bhava_library.infrastructure.database import Database
+from bhava_library.services.deduplicate import run_deduplicate
 
 
 def _load_compare(repo_root: Path):
@@ -26,6 +27,7 @@ def _load_compare(repo_root: Path):
 def run_integrity(settings: Settings) -> dict[str, object]:
     db = Database(settings.catalog_db)
     db.migrate()
+    duplicate_stats = run_deduplicate(settings)
     pragma = db.integrity_check()
     compare_mod = _load_compare(settings.repo_root)
     try:
@@ -40,5 +42,6 @@ def run_integrity(settings: Settings) -> dict[str, object]:
     return {
         "pragma_integrity": pragma,
         "original_compare": compare_result,
+        "duplicate_analysis": duplicate_stats,
         "ok": ok,
     }

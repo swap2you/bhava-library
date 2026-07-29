@@ -233,6 +233,27 @@ def test_specific_forms_precede_broad_metadata(
     assert hit.classifier == evidence_source
 
 
+@pytest.mark.parametrize(
+    ("media_type", "expected"),
+    [
+        ("Coloring Books", "coloring-book"),
+        ("Story Books", "illustrated-storybook"),
+        ("Worksheets", "worksheet"),
+        ("Games", "game"),
+    ],
+)
+def test_specific_source_categories_are_metadata_fallbacks(media_type: str, expected: str) -> None:
+    hit = _content_form_hit(
+        {
+            "title_original": "Krishna Resource",
+            "relative_path": "data/originals/resource.bin",
+            "media_type": media_type,
+        }
+    )
+    assert hit.term == expected
+    assert hit.classifier == "media_type"
+
+
 @pytest.mark.parametrize("form", ["coloring-page", "coloring-book"])
 def test_coloring_forms_create_printable_proposals(form: str) -> None:
     title = form.replace("-", " ").title()

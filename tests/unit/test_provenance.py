@@ -129,6 +129,45 @@ def test_rerun_remediates_legacy_shells_and_preserves_reviews(tmp_path: Path) ->
     first_candidate = db.execute("SELECT * FROM production_candidates")[0]
     first_payload = json.loads(first_candidate["payload_json"])
     assert first_payload["relative_path"] == "data/originals/reference.pdf"
+    stale_id = "BL-PROV-STALE::activity-candidate"
+    with db.session() as conn:
+        conn.execute(
+            """
+            INSERT INTO production_candidates(
+              candidate_id, resource_id, product_type, status, created_at
+            ) VALUES (?, 'BL-PROV-001', 'activity-candidate', 'candidate_proposal',
+                      datetime('now'))
+            """,
+            (stale_id,),
+        )
+        conn.execute(
+            """
+            INSERT INTO source_dossiers(candidate_id, payload_json, review_state, updated_at)
+            VALUES (?, '{}', 'dossier_shell', datetime('now'))
+            """,
+            (stale_id,),
+        )
+        conn.execute(
+            """
+            INSERT INTO independent_creation_records(
+              candidate_id, payload_json, similarity_status, updated_at
+            ) VALUES (?, '{}', 'independent_creation_not_started', datetime('now'))
+            """,
+            (stale_id,),
+        )
+    export_root = settings.data_dir / "exports" / "bhava-candidates"
+    stale_metadata = export_root / "metadata" / "BL-PROV-STALE--activity-candidate.json"
+    stale_brief = export_root / "briefs" / "BL-PROV-STALE--activity-candidate.md"
+    stale_metadata.write_text("{}", encoding="utf-8")
+    stale_brief.write_text("# stale", encoding="utf-8")
+    cleanup = run_candidates(settings)
+    assert cleanup["removed_stale_shells"] == 1
+    assert not db.execute(
+        "SELECT 1 FROM production_candidates WHERE candidate_id = ?",
+        (stale_id,),
+    )
+    assert not stale_metadata.exists()
+    assert not stale_brief.exists()
     with db.session() as conn:
         conn.execute(
             "UPDATE production_candidates SET status = 'proposed' WHERE candidate_id = ?",

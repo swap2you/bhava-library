@@ -53,7 +53,6 @@ def run_deduplicate(settings: Settings) -> dict[str, int]:
                 duplicate_kind = NULL,
                 reacquisition_required = CASE
                   WHEN size_bytes <= ? THEN 1 ELSE 0 END
-            WHERE quarantine_reason IS NULL
             """,
             (TRUNCATED_SOURCE_MAX_BYTES,),
         )
@@ -62,7 +61,7 @@ def run_deduplicate(settings: Settings) -> dict[str, int]:
                 """
                 SELECT sha256, MIN(file_id) AS canonical, COUNT(*) AS n
                 FROM local_files
-                WHERE quarantine_reason IS NULL AND sha256 <> ''
+                WHERE sha256 <> ''
                 GROUP BY sha256
                 HAVING n > 1
                 """
@@ -76,7 +75,7 @@ def run_deduplicate(settings: Settings) -> dict[str, int]:
                     """
                     SELECT file_id, size_bytes
                     FROM local_files
-                    WHERE sha256 = ? AND quarantine_reason IS NULL
+                    WHERE sha256 = ?
                     ORDER BY file_id
                     """,
                     (row["sha256"],),

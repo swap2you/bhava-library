@@ -145,6 +145,9 @@ def run_candidates(settings: Settings, *, limit: int | None = None) -> dict[str,
         sql += " LIMIT ?"
         params = (*params, limit)
     rows = db.execute(sql, params)
+    desired_candidate_ids = {
+        _candidate_id(str(row["resource_id"]), str(row["product_type"])) for row in rows
+    }
 
     export_root = settings.data_dir / "exports" / "bhava-candidates"
     meta_dir = export_root / "metadata"
@@ -154,7 +157,50 @@ def run_candidates(settings: Settings, *, limit: int | None = None) -> dict[str,
 
     created = 0
     exported = 0
+    removed = 0
+    stale_candidate_ids: list[str] = []
     with db.session() as conn:
+        existing_generated = conn.execute(
+            """
+            SELECT pc.candidate_id, pc.status AS candidate_status,
+                   sd.review_state AS dossier_status,
+                   ic.similarity_status AS creation_status
+            FROM production_candidates pc
+            LEFT JOIN source_dossiers sd ON sd.candidate_id = pc.candidate_id
+            LEFT JOIN independent_creation_records ic ON ic.candidate_id = pc.candidate_id
+            """
+        ).fetchall()
+        for existing in existing_generated:
+            candidate_id = str(existing["candidate_id"])
+            if candidate_id in desired_candidate_ids:
+                continue
+            if existing["candidate_status"] not in GENERATED_CANDIDATE_STATUSES:
+                continue
+            if (
+                existing["dossier_status"] is not None
+                and existing["dossier_status"] not in GENERATED_DOSSIER_STATUSES
+            ):
+                continue
+            if (
+                existing["creation_status"] is not None
+                and existing["creation_status"] not in GENERATED_CREATION_STATUSES
+            ):
+                continue
+            conn.execute(
+                "DELETE FROM independent_creation_records WHERE candidate_id = ?",
+                (candidate_id,),
+            )
+            conn.execute(
+                "DELETE FROM source_dossiers WHERE candidate_id = ?",
+                (candidate_id,),
+            )
+            conn.execute(
+                "DELETE FROM production_candidates WHERE candidate_id = ?",
+                (candidate_id,),
+            )
+            stale_candidate_ids.append(candidate_id)
+            removed += 1
+
         for row in rows:
             cid = _candidate_id(row["resource_id"], row["product_type"])
             payload = {
@@ -261,6 +307,11 @@ def run_candidates(settings: Settings, *, limit: int | None = None) -> dict[str,
                 raise RuntimeError("candidate export produced a binary file")
             exported += 2
 
+    for candidate_id in stale_candidate_ids:
+        stem = candidate_id.replace("::", "--")
+        for stale_path in (meta_dir / f"{stem}.json", briefs_dir / f"{stem}.md"):
+            stale_path.unlink(missing_ok=True)
+
     try:
         export_rel = str(export_root.relative_to(settings.repo_root))
     except ValueError:
@@ -271,4 +322,4 @@ def run_candidates(settings: Settings, *, limit: int | None = None) -> dict[str,
         "binary_files": 0,
     }
     (export_root / "MANIFEST.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    return {"candidates": created, "export_files": exported}
+    return {"candidates": created, "export_files": exported, "removed_stale_shells": removed}
